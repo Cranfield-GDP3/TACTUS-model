@@ -1,0 +1,16 @@
+simplejson
+pandas
+numpy
+Pillow
+cython
+matplotlib
+scikit-image
+opencv-python
+h5py
+imgaug
+pandas
+argparse
+IPython[all]
+sklearn
+slidingwindow
+pyyaml
