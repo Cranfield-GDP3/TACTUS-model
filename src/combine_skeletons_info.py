@@ -73,6 +73,8 @@ def get_all_skeletons_info():
           label_data = json.load(labels_)
           label_= label_data[_CLASS][0][ACTION_CLASS]
           offender_ = label_data[OFFENDER]
+          if offender_[0] == 0:
+            offender_[0]+=1
           start_ = label_data[_CLASS][0][FRAME_START]
           end_ = label_data[_CLASS][0][FRAME_END]
 

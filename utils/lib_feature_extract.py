@@ -232,27 +232,21 @@ class ProcFtr(object):
                 p = [self.x[self.i], self.x[self.i+1]]
                 self.i += 2
                 return p
-        tmp = JointPosExtractor(x)
+        joints_ = JointPosExtractor(x)
 
-        pneck = tmp.get_next_point()
-
-        prshoulder = tmp.get_next_point()
-        prelbow = tmp.get_next_point()
-        prwrist = tmp.get_next_point()
-
-        plshoulder = tmp.get_next_point()
-        plelbow = tmp.get_next_point()
-        plwrist = tmp.get_next_point()
-
-        prhip = tmp.get_next_point()
-        prknee = tmp.get_next_point()
-        prankle = tmp.get_next_point()
-
-        plhip = tmp.get_next_point()
-        plknee = tmp.get_next_point()
-        plankle = tmp.get_next_point()
-
-
+        pneck = joints_.get_next_point()
+        plshoulder = joints_.get_next_point()
+        prshoulder = joints_.get_next_point()
+        plelbow = joints_.get_next_point()
+        prelbow = joints_.get_next_point()
+        plwrist = joints_.get_next_point()
+        prwrist = joints_.get_next_point()
+        plhip = joints_.get_next_point()
+        prhip = joints_.get_next_point()
+        plknee = joints_.get_next_point()
+        prknee = joints_.get_next_point()
+        plankle = joints_.get_next_point()
+        prankle = joints_.get_next_point()
 
         class Get12Angles(object):
             def __init__(self):
@@ -268,27 +262,27 @@ class ProcFtr(object):
                 self.x_lengths[self.j] = dist
                 self.j += 1
 
-        tmp2 = Get12Angles()
+        angle_ = Get12Angles()
 
-        tmp2.set_next_angle_len(prshoulder, pneck, PI)  # r-shoulder
-        tmp2.set_next_angle_len(prelbow, prshoulder, PI/2)  # r-elbow
-        tmp2.set_next_angle_len(prwrist, prelbow, PI/2)  # r-wrist
+        angle_.set_next_angle_len(prshoulder, pneck, PI)  # r-shoulder
+        angle_.set_next_angle_len(prelbow, prshoulder, PI/2)  # r-elbow
+        angle_.set_next_angle_len(prwrist, prelbow, PI/2)  # r-wrist
 
-        tmp2.set_next_angle_len(plshoulder, pneck, 0)  # l-shoulder
-        tmp2.set_next_angle_len(plelbow, plshoulder, PI/2)  # l-elbow
-        tmp2.set_next_angle_len(plwrist, plelbow, PI/2)  # l-wrist
+        angle_.set_next_angle_len(plshoulder, pneck, 0)  
+        angle_.set_next_angle_len(plelbow, plshoulder, PI/2)  
+        angle_.set_next_angle_len(plwrist, plelbow, PI/2)  
 
-        tmp2.set_next_angle_len(prhip, pneck, PI/2+PI/18)
-        tmp2.set_next_angle_len(prknee, prhip, PI/2)
-        tmp2.set_next_angle_len(prankle, prknee, PI/2)
+        angle_.set_next_angle_len(prhip, pneck, PI/2+PI/18)
+        angle_.set_next_angle_len(prknee, prhip, PI/2)
+        angle_.set_next_angle_len(prankle, prknee, PI/2)
 
-        tmp2.set_next_angle_len(plhip, pneck, PI/2-PI/18)
-        tmp2.set_next_angle_len(plknee, plhip, PI/2)
-        tmp2.set_next_angle_len(plankle, plknee, PI/2)
+        angle_.set_next_angle_len(plhip, pneck, PI/2-PI/18)
+        angle_.set_next_angle_len(plknee, plhip, PI/2)
+        angle_.set_next_angle_len(plankle, plknee, PI/2)
 
         # Output
-        features_angles = tmp2.f_angles
-        features_lens = tmp2.x_lengths
+        features_angles = angle_.f_angles
+        features_lens = angle_.x_lengths
         return features_angles, features_lens
 
 # Featuregenerator is a main class for extracting the features from input data
@@ -341,10 +335,16 @@ class FeatureGenerator(object):
                 # Add noise druing training stage to augment data (TODO: remove in next commit)
                 x = self._add_noises(x, self._noise_intensity)
             x = np.array(x)
+            angles, lens = ProcFtr.joint_pos_2_angle_and_length(x)
+            if indices ==1:
+              print("orginal angles ----------\n", angles)
+              print("orginal lens ----------\n", lens)
             
 
             # Push to deque
             self._x_deque.append(x)
+            self._angles_deque.append(angles) 
+            self._lens_deque.append(lens) 
             self._maintain_deque_size()
             self._pre_x = x.copy()
 
@@ -365,6 +365,13 @@ class FeatureGenerator(object):
                 #TODO: add angles
                 f_poses = self._deque_features_to_1darray(xnorm_list)
 
+                f_angles = self._deque_features_to_1darray(self._angles_deque) 
+                f_lens = self._deque_features_to_1darray(self._lens_deque) / mean_height 
+                
+                if indices ==1:
+                  print("f_angles-------------------\n", f_angles)
+                  print("f_lens-------------------\n", f_lens)
+
                 # -- Get features of motion
                 f_v_center = self._compute_v_center(
                     self._x_deque, step=1) / mean_height  # len = (t=4)*2 = 8
@@ -381,13 +388,13 @@ class FeatureGenerator(object):
                   print("Joints velocity: ++++++++++++++++++++++++++:\n", f_v_joints)
 
 
-                # lengths :130 104 80
-                features = np.concatenate((f_poses, f_v_joints, f_v_center))
+                # lengths :130 104 80 60 60 =  434
+                features = np.concatenate((f_poses, f_v_joints, f_v_center, f_angles, f_lens))
                 if indices ==1 :
-                  print("lenghts *****\n", len(f_poses), len(f_v_joints), len(f_v_center))
-                  print("Final Feature Vector: ++++++++++++++++++++++++\n", features)
+                  print("lenghts *****\n", len(f_poses), len(f_v_joints), len(f_v_center), len(f_angles), len(f_lens))
+                  print("Final Feature Vector: ++++++++++++++++++++++++\n", len(features),features)
 
-               
+                
                 return True, features.copy()
 
     def _maintain_deque_size(self):

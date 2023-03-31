@@ -1,6 +1,6 @@
 # Configurations for this project
 
-classes: ['kicking', 'punching', 'pushing'] 
+classes: ['kicking', 'punching', 'pushing', 'neutral'] 
 
 
 features:
