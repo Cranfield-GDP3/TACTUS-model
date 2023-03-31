@@ -55,6 +55,7 @@ HUMANS = "skeletons"
 TRACKING_ID = "id_stupid"
 FRAME_ID = "frame_id"
 KEYPOINTS = "keypoints"
+DATA_AUGMENT = False # For data augmentation
 
 def get_all_skeletons_info():
   #with open(DST_ALL_SKELETONS_TXT, "w") as f:
