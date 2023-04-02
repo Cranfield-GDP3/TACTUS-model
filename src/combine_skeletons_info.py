@@ -20,7 +20,7 @@ if True:
     CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
     sys.path.append(ROOT)
 
-    import utils.lib_helpers as lib_commons
+    import utils2.lib_helpers as lib_commons
 
 
 def par(path):  
@@ -41,7 +41,7 @@ DST_ALL_SKELETONS_TXT = par(cfg["output"]["all_skeletons_txt"])
 
 IDX_ACTION_LABEL=3
 KEYPOINTS_FOLDER = "/10fps"
-KEYPOINTS_FILE = "alphapose_2d.json"
+KEYPOINTS_FILE = "yolov7.json"
 JSON = ".json"
 
 # JSON METADATA
@@ -60,43 +60,67 @@ DATA_AUGMENT = False # For data augmentation
 def get_all_skeletons_info():
   #with open(DST_ALL_SKELETONS_TXT, "w") as f:
   # TODO: ADD TQDM for next commit
+#######################
   print("Extracting information ...")
   training_dataframe = []
   all_valid_frames = 0 
+  
   for folder_num, file_ in enumerate(os.listdir(SRC_DETECTED_SKELETONS_FOLDER)):
-
-    '''
-    extract: action label, start and stop frame 
-    '''
+    
+    
     for label_file in os.listdir(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_):
-      if label_file.endswith(JSON):       
-        with open(os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_, label_file)) as labels_:
-          label_data = json.load(labels_)
-          label_= label_data[_CLASS][0][ACTION_CLASS]
-          offender_ = label_data[OFFENDER]
-          if offender_[0] == 0:
-            offender_[0]+=1
-          start_ = label_data[_CLASS][0][FRAME_START]
-          end_ = label_data[_CLASS][0][FRAME_END]
+      
+      if label_file.endswith(JSON):   
+        label_file_path = os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_, label_file)
+     
+        if os.path.exists(label_file_path) and os.path.getsize(label_file_path) > 0: 
+          
+          with open(label_file_path) as labels_:
+            try:
+              
+              label_data = json.load(labels_)  
+              label_= label_data[_CLASS][0][ACTION_CLASS]
+              offender_ = label_data[OFFENDER]
+              
+              if offender_[0] == 0:
+                offender_[0]+=1
+                
+              start_ = label_data[_CLASS][0][FRAME_START]
+              end_ = label_data[_CLASS][0][FRAME_END]
 
-    for filename in os.listdir(SRC_DETECTED_SKELETONS_FOLDER +"/"+file_+ KEYPOINTS_FOLDER):  
-        
-      valid_frame =0
-      if filename == KEYPOINTS_FILE:
-        with open(os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_+ KEYPOINTS_FOLDER , filename)) as json_file:
-          data = json.load(json_file)
-          for frames in data[FRAME]:
-            for points in frames[HUMANS]:
-              if points[TRACKING_ID] == offender_[0]:                
-                if int(frames[FRAME_ID][:-4]) >=start_ and int(frames[FRAME_ID][:-4]) <= end_:                  
-                  valid_frame+=1
-                  all_valid_frames+=1
-                  # extract keypoints
-                  key_frame = points[KEYPOINTS]
-                  key_frame_misc = [folder_num+1, valid_frame, all_valid_frames, label_, frames[FRAME_ID]]                 
-                  training_dataframe.append(key_frame_misc + [points[KEYPOINTS][i] for i in range(len(points[KEYPOINTS])) if (i+1) % 3 != 0])
+              for filename in os.listdir(SRC_DETECTED_SKELETONS_FOLDER +"/"+file_+ KEYPOINTS_FOLDER):
+              
+                valid_frame =0
+                if filename == KEYPOINTS_FILE:
+                  with open(os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_+ KEYPOINTS_FOLDER , filename)) as json_file:
+                    data = json.load(json_file)
+                    
+                    for ig,frames in enumerate(data[FRAME]):
+                      
+                      for points in frames[HUMANS]:
+                       
+                        if list(points.keys())== ["keypoints", "id_stupid"] and points[TRACKING_ID] == offender_[0]:            
+                          if int(frames[FRAME_ID][:-4]) >=start_ and int(frames[FRAME_ID][:-4]) <= end_:                  
+                            valid_frame+=1
+                            all_valid_frames+=1
+                            key_frame = points[KEYPOINTS]                       
+                            key_frame_misc = [folder_num+1, valid_frame, all_valid_frames, label_, frames[FRAME_ID]] 
+                            training_dataframe.append(key_frame_misc + key_frame)
+                            
+                        #else:
+                        #  if not list(points.keys())== ["keypoints", "id_stupid"]:
+                        #     print("No tracking ID present in file",file_, ": frame: ", ig)
+      
+              
+            except json.decoder.JSONDecodeError:
+              print("JSON file is empty or invalid.", label_file)
+        else:
+          print("JSON file is empty.", label_file)
+          
+      #else:
+      #  print("No label file present for folder:", file_)
   return training_dataframe
-                 
+        
   
 
 def main():
