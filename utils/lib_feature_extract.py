@@ -47,14 +47,14 @@ def retrain_only_body_joints(skeleton):
     So, we habe total 26 coordinates now after removal of the first 5 keypoints and 
     addition of keypoint NECK
     '''
-    new_skeleton = skeleton.copy()[10:]
+    #new_skeleton = skeleton.copy()[10:]
     
-    neck_x, neck_y = (skeleton.copy()[6] + skeleton.copy()[8])/2, (skeleton.copy()[7] + skeleton.copy()[9])/2
-    neck_ = np.array([neck_x, neck_y])
+    #neck_x, neck_y = (skeleton.copy()[6] + skeleton.copy()[8])/2, (skeleton.copy()[7] + skeleton.copy()[9])/2
+    #neck_ = np.array([neck_x, neck_y])
   
-    retrained_skeleton = np.concatenate((neck_,new_skeleton), axis=0)
+    #retrained_skeleton = np.concatenate((neck_,new_skeleton), axis=0)
 
-    return retrained_skeleton
+    return skeleton.copy()
    
 
 # Keypoints format
@@ -389,7 +389,7 @@ class FeatureGenerator(object):
 
 
                 # lengths :130 104 80 60 60 =  434
-                features = np.concatenate((f_poses, f_v_joints, f_v_center, f_angles, f_lens))
+                features = np.concatenate((f_poses, f_v_joints, f_v_center))#, f_angles, f_lens))
                 if indices ==1 :
                   print("lenghts *****\n", len(f_poses), len(f_v_joints), len(f_v_center), len(f_angles), len(f_lens))
                   print("Final Feature Vector: ++++++++++++++++++++++++\n", len(features),features)
