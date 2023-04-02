@@ -9,7 +9,7 @@ features:
 combine_skeletons_info.py:
   input:
     # A folder of skeleton jsons.
-    detected_skeletons_folder: &skels_folder data_proc/10fps
+    detected_skeletons_folder: &skels_folder data_proc/ut_interaction
   output:
     # One txt containing all valid skeletons.
     all_skeletons_txt: &skels_txt data_proc/skeletons_data.txt
