@@ -58,48 +58,44 @@ KEYPOINTS = "keypoints"
 DATA_AUGMENT = False # For data augmentation
 
 def get_all_skeletons_info():
-  #with open(DST_ALL_SKELETONS_TXT, "w") as f:
-  # TODO: ADD TQDM for next commit
+ 
+#######################
+# TODO: ADD TQDM for next commit
+#        Code indentation fix
 #######################
   print("Extracting information ...")
   training_dataframe = []
   all_valid_frames = 0 
   
-  for folder_num, file_ in enumerate(os.listdir(SRC_DETECTED_SKELETONS_FOLDER)):
-    
-    
+  for folder_num, file_ in enumerate(os.listdir(SRC_DETECTED_SKELETONS_FOLDER)):    
+    print(SRC_DETECTED_SKELETONS_FOLDER)
     for label_file in os.listdir(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_):
-      
+      print(file_)
       if label_file.endswith(JSON):   
-        label_file_path = os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_, label_file)
-     
-        if os.path.exists(label_file_path) and os.path.getsize(label_file_path) > 0: 
-          
+        label_file_path = os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_, label_file)     
+        if os.path.exists(label_file_path) and os.path.getsize(label_file_path) > 0:           
           with open(label_file_path) as labels_:
             try:
-              
               label_data = json.load(labels_)  
               label_= label_data[_CLASS][0][ACTION_CLASS]
-              offender_ = label_data[OFFENDER]
-              
-              if offender_[0] == 0:
-                offender_[0]+=1
+              if "offender" in list(label_data.keys()):
+                offender_ = label_data[OFFENDER]
+                offender_id = offender_[0]
+                if offender_[0] == 0:
+                  offender_id=1
+              else:
+                offender_id=1
                 
               start_ = label_data[_CLASS][0][FRAME_START]
               end_ = label_data[_CLASS][0][FRAME_END]
-
-              for filename in os.listdir(SRC_DETECTED_SKELETONS_FOLDER +"/"+file_+ KEYPOINTS_FOLDER):
-              
+              for filename in os.listdir(SRC_DETECTED_SKELETONS_FOLDER +"/"+file_+ KEYPOINTS_FOLDER):            
                 valid_frame =0
                 if filename == KEYPOINTS_FILE:
                   with open(os.path.join(SRC_DETECTED_SKELETONS_FOLDER+"/"+file_+ KEYPOINTS_FOLDER , filename)) as json_file:
-                    data = json.load(json_file)
-                    
-                    for ig,frames in enumerate(data[FRAME]):
-                      
-                      for points in frames[HUMANS]:
-                       
-                        if list(points.keys())== ["keypoints", "id_stupid"] and points[TRACKING_ID] == offender_[0]:            
+                    data = json.load(json_file)                 
+                    for ig,frames in enumerate(data[FRAME]):                
+                      for points in frames[HUMANS]:                     
+                        if list(points.keys())== ["keypoints", "id_stupid"] and points[TRACKING_ID] == offender_id:            
                           if int(frames[FRAME_ID][:-4]) >=start_ and int(frames[FRAME_ID][:-4]) <= end_:                  
                             valid_frame+=1
                             all_valid_frames+=1
@@ -110,8 +106,7 @@ def get_all_skeletons_info():
                         #else:
                         #  if not list(points.keys())== ["keypoints", "id_stupid"]:
                         #     print("No tracking ID present in file",file_, ": frame: ", ig)
-      
-              
+                  
             except json.decoder.JSONDecodeError:
               print("JSON file is empty or invalid.", label_file)
         else:
@@ -121,8 +116,6 @@ def get_all_skeletons_info():
       #  print("No label file present for folder:", file_)
   return training_dataframe
         
-  
-
 def main():
   training_dataframe = get_all_skeletons_info()
   print("Writing information to skeletons_data.txt ...")
@@ -134,8 +127,7 @@ def main():
     #print(skeletons)
     if not skeletons:  # If empty, discard this image.
       continue
-    skeleton = skeletons
-        
+    skeleton = skeletons        
     label = skeleton[IDX_ACTION_LABEL]
     if label not in CLASSES:  # If invalid label, discard this image.
       continue
