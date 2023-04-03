@@ -62,10 +62,18 @@ if True:  # Include project path
     import utils.lib_test_images_io as lib_images_io
     import utils.lib_plot as lib_plot
     import utils.lib_helpers as lib_commons
-    from utils.lib_alphapose import SkeletonDetector # TODO
+    from utils.lib_openpose import SkeletonDetector # TODO
     from utils.lib_tracker import Tracker # TODO
+    from tactus_yolov7 import Yolov7, resize
+
     
-     
+    
+
+MODEL_WEIGHTS_PATH = Path("data", "raw", "model", "yolov7-w6-pose.pt")
+print(MODEL_WEIGHTS_PATH)
+model_yolov7 = Yolov7(MODEL_WEIGHTS_PATH, device="cuda:0")   
+from deep_sort_realtime.deepsort_tracker import DeepSort
+from tactus_data import retracker
 
 
 def par(path):  
@@ -223,6 +231,7 @@ class MultiPersonClassifier(object):
                 self.dict_id2clf[id] = self._create_classifier(id)
 
             classifier = self.dict_id2clf[id]
+            print("skeleton:\n", skeleton)
             id2label[id] = classifier.predict(skeleton)  
             # predict label
             # print("\n\nPredicting label for human{}".format(id))
@@ -247,8 +256,8 @@ def remove_skeletons_with_few_joints(skeletons):
     ''' Remove bad skeletons before sending to the tracker '''
     good_skeletons = []
     for skeleton in skeletons:
-        px = skeleton[2:2+13*2:2]
-        py = skeleton[3:2+13*2:2]
+        px = skeleton[0:2+13*2:2]
+        py = skeleton[1:2+13*2:2]
         num_valid_joints = len([x for x in px if x != 0])
         num_leg_joints = len([x for x in px[-6:] if x != 0])
         total_size = max(py) - min(py)
@@ -259,34 +268,6 @@ def remove_skeletons_with_few_joints(skeletons):
     return good_skeletons
 
 
-def draw_result_img(img_disp, ith_img, humans, dict_id2skeleton,
-                    skeleton_detector, multiperson_classifier):
-    ''' Draw skeletons, labels, and prediction scores onto image for display '''
-
-
-    # Draw all people's skeleton
-    skeleton_detector.draw(img_disp, humans)
-
-    # Draw bounding box and label of each person
-    if len(dict_id2skeleton):
-        for id, label in dict_id2label.items():
-            skeleton = dict_id2skeleton[id]
-            # scale the y data back to original
-            skeleton[1::2] = skeleton[1::2] / scale_h
-            # print("Drawing skeleton: ", dict_id2skeleton[id], "with label:", label, ".")
-            lib_plot.draw_action_result(img_disp, id, skeleton, label, ith_img)
-
-   
-    cv2.putText(img_disp, "Frame:" + str(ith_img),
-                (20, 20), fontScale=1.5, fontFace=cv2.FONT_HERSHEY_PLAIN,
-                color=(0, 0, 0), thickness=2)
-
-
-    if len(dict_id2skeleton):
-        classifier_of_a_person = multiperson_classifier.get_classifier(
-            id='min')
-
-    return img_disp
 
 
 def get_the_skeleton_data_to_save_to_disk(dict_id2skeleton):
@@ -308,25 +289,21 @@ if __name__ == "__main__":
 
     #Detector, tracker, classifier
  
-    # TODO: Add functionality for this 
-    skeleton_detector = SkeletonDetector(ALPHAPOSE_MODEL, OPENPOSE_IMG_SIZE)
-
-    # Change the nasic tracker to Deepsort Tracker
-    multiperson_tracker = Tracker()
-
+    deepsort_tracker = DeepSort(n_init=3, max_age=5)
+    '''
+    Isssue: Tracking ID is False
+    '''
     multiperson_classifier = MultiPersonClassifier(SRC_MODEL_PATH, CLASSES)
 
     # -- Image reader
     images_loader = select_images_loader(SRC_DATA_TYPE, SRC_DATA_PATH)
- 
 
     # output folder
     os.makedirs(DST_FOLDER, exist_ok=True)
     os.makedirs(DST_FOLDER + DST_SKELETON_FOLDER_NAME, exist_ok=True)
 
-    # video writer
-    video_writer = lib_images_io.VideoWriter(
-        DST_FOLDER + DST_VIDEO_NAME, DST_VIDEO_FPS)
+    # video writer: TODO: write a new video write
+    #video_writer = lib_images_io.VideoWriter(DST_FOLDER + DST_VIDEO_NAME, DST_VIDEO_FPS)
 
     # Read images and process
     try:
@@ -341,39 +318,39 @@ if __name__ == "__main__":
             print(f"\nProcessing {ith_img}th image ...")
 
             # Skeleton detection
-            humans = skeleton_detector.detect(img)
-            skeletons, scale_h = skeleton_detector.humans_to_skels_list(humans)
-            skeletons = remove_skeletons_with_few_joints(skeletons)
+            img = resize(img)
+            skeletons_  = model_yolov7.predict_frame(img)
+            tracking_id = retracker.deepsort_track_frame(deepsort_tracker, img, skeletons_)
+            skeleton_points=[]
+            for human in skeletons_:
+              skeleton_points.append([human["keypoints"][i] for i in range(len(human["keypoints"])) if (i+1) % 3 != 0])
+            
+            ske_dict = [(key, value)for i, (key, value) in enumerate(zip(tracking_id, skeleton_points))]
+            
+            yolo_tracker_dict = dict(ske_dict)            
 
-            # Tracking
-            dict_id2skeleton = multiperson_tracker.track(
-                skeletons)  # int id -> np.array() skeleton
-            #print("Tracking people********\n", dict_id2skeleton)
-            # -- Recognize action of each person
-            if len(dict_id2skeleton):
+            if len(yolo_tracker_dict):
                 dict_id2label = multiperson_classifier.classify(
-                    dict_id2skeleton)
+                    yolo_tracker_dict)
 
             # Display results
-            img_disp = draw_result_img(img_disp, ith_img, humans, dict_id2skeleton,
-                                       skeleton_detector, multiperson_classifier)
+            # Write a display function
 
             # Print label of a person
-            if len(dict_id2skeleton):
-                min_id = min(dict_id2skeleton.keys())
+            if len(yolo_tracker_dict):
+                min_id = min(yolo_tracker_dict.keys())
                 print("prediced label is :", dict_id2label[min_id])
 
             # -- Display image, and write to video.avi
-            #img_displayer.display(img_disp, wait_key_ms=1)
-            video_writer.write(img_disp)
+            #video_writer.write(img_disp)
 
             # -- Get skeleton data and save to file
             skels_to_save = get_the_skeleton_data_to_save_to_disk(
-                dict_id2skeleton)
+                yolo_tracker_dict)
             lib_commons.save_listlist(
                 DST_FOLDER + DST_SKELETON_FOLDER_NAME +
                 SKELETON_FILENAME_FORMAT.format(ith_img),
                 skels_to_save)
     finally:
-        video_writer.stop()
+        #video_writer.stop()
         print("END OF TACTUS ACTION RECOGNITION")
