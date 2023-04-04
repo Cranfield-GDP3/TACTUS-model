@@ -8,9 +8,8 @@ scikit-image
 opencv-python
 h5py
 imgaug
-pandas
 argparse
 IPython[all]
-sklearn
+scikit-learn
 slidingwindow
 pyyaml
