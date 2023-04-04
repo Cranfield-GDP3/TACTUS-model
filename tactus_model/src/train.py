@@ -30,9 +30,9 @@ if True:  # Project Path
     CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
     sys.path.append(ROOT)
 
-    import utils.lib_plot as lib_plot
-    import utils.lib_helpers as lib_commons
-    from utils.lib_classifier import ClassifierOfflineTrain
+    import tactus_model.utils.lib_plot as lib_plot
+    import tactus_model.utils.lib_helpers as lib_commons
+    from tactus_model.utils.lib_classifier import ClassifierOfflineTrain
 
 
 

@@ -336,10 +336,6 @@ class FeatureGenerator(object):
                 x = self._add_noises(x, self._noise_intensity)
             x = np.array(x)
             angles, lens = ProcFtr.joint_pos_2_angle_and_length(x)
-            if indices ==1:
-              print("orginal angles ----------\n", angles)
-              print("orginal lens ----------\n", lens)
-            
 
             # Push to deque
             self._x_deque.append(x)
@@ -351,51 +347,34 @@ class FeatureGenerator(object):
             # -- Extract features
             if len(self._x_deque) < self._window_size:
                 return False, None
-            else:
-                # -- Feature Normalization ------ 
-                h_list = [ProcFtr.get_body_height(xi) for xi in self._x_deque]
-                mean_height = np.mean(h_list)
-                xnorm_list = [ProcFtr.remove_body_offset(xi)/mean_height
-                              for xi in self._x_deque]
 
-                if indices ==1:
-                  print("Normalized values++++++++++++++++++\n", xnorm_list,mean_height)
+            # -- Feature Normalization ------ 
+            h_list = [ProcFtr.get_body_height(xi) for xi in self._x_deque]
+            mean_height = np.mean(h_list)
+            xnorm_list = [ProcFtr.remove_body_offset(xi)/mean_height
+                            for xi in self._x_deque]
 
-                # -- Get features: Right now only normalized keypoints are used
-                #TODO: add angles
-                f_poses = self._deque_features_to_1darray(xnorm_list)
+            # -- Get features: Right now only normalized keypoints are used
+            #TODO: add angles
+            f_poses = self._deque_features_to_1darray(xnorm_list)
 
-                f_angles = self._deque_features_to_1darray(self._angles_deque) 
-                f_lens = self._deque_features_to_1darray(self._lens_deque) / mean_height 
-                
-                if indices ==1:
-                  print("f_angles-------------------\n", f_angles)
-                  print("f_lens-------------------\n", f_lens)
+            f_angles = self._deque_features_to_1darray(self._angles_deque) 
+            f_lens = self._deque_features_to_1darray(self._lens_deque) / mean_height
 
-                # -- Get features of motion
-                f_v_center = self._compute_v_center(
-                    self._x_deque, step=1) / mean_height  # len = (t=4)*2 = 8
-                
-                if indices == 1:
-                  print(self._x_deque, mean_height)
-                  print("Center of Mass Velocity: ++++++++++++++++++++++++++++:\n", f_v_center)
+            # -- Get features of motion
+            f_v_center = self._compute_v_center(
+                self._x_deque, step=1) / mean_height  # len = (t=4)*2 = 8
 
-                f_v_center = np.repeat(f_v_center, 10) 
+            f_v_center = np.repeat(f_v_center, 10) 
 
-                f_v_joints = self._compute_v_all_joints(
-                    xnorm_list, step=1)  # len = (t=(5-1)/step)*13*2 = 104
-                if indices== 1:
-                  print("Joints velocity: ++++++++++++++++++++++++++:\n", f_v_joints)
+            f_v_joints = self._compute_v_all_joints(
+                xnorm_list, step=1)  # len = (t=(5-1)/step)*13*2 = 104
 
 
-                # lengths :130 104 80 60 60 =  434
-                features = np.concatenate((f_poses, f_v_joints, f_v_center))#, f_angles, f_lens))
-                if indices ==1 :
-                  print("lenghts *****\n", len(f_poses), len(f_v_joints), len(f_v_center), len(f_angles), len(f_lens))
-                  print("Final Feature Vector: ++++++++++++++++++++++++\n", len(features),features)
-
-                
-                return True, features.copy()
+            # lengths :130 104 80 60 60 =  434
+            features = np.concatenate((f_poses, f_v_joints, f_v_center))#, f_angles, f_lens))
+            
+            return True, features.copy()
 
     def _maintain_deque_size(self):
         if len(self._x_deque) > self._window_size:
@@ -415,7 +394,7 @@ class FeatureGenerator(object):
 
     def _compute_v_all_joints(self, xnorm_list, step):
         vel = []
- 
+
         for i in range(0, len(xnorm_list) - step, step):
             dxdy = xnorm_list[i+step][:] - xnorm_list[i][:]
             vel += dxdy.tolist()

@@ -42,7 +42,7 @@ if True:
     ROOT = os.path.dirname(os.path.abspath(__file__))+"/../"
     sys.path.append(ROOT)
 
-    from utils.lib_feature_extract import FeatureGenerator
+    from tactus_model.utils.lib_feature_extract import FeatureGenerator
 
 
 # Settingd for dimensionality reduction

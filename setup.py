@@ -50,7 +50,7 @@ extras_require = {
 
 setup(
     name="TACTUS - model",
-    version=get_version("src/__init__.py"),
+    version=get_version("tactus_model/__init__.py"),
     description="Threatening activities classification toward users' security",
     long_description=long_description,
     classifiers=[
@@ -69,7 +69,7 @@ setup(
         "issues": "https://github/Cranfield-GDP3/TACTUS-model/issues",
     },
     python_requires=">=3.9",
-    packages=find_packages(where="."),
+    packages=["tactus_model"],
     install_requires=install_requires,
     tests_require=tests_require,
     extras_require=extras_require,

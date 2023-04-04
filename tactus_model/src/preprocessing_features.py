@@ -25,9 +25,9 @@ if True:
     CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
     sys.path.append(ROOT)
 
-    import utils.lib_helpers as lib_commons
-    from utils.lib_load_skeletons import load_skeleton_data
-    from utils.lib_feature_extract import extract_multi_frame_features
+    import tactus_model.utils.lib_helpers as lib_commons
+    from tactus_model.utils.lib_load_skeletons import load_skeleton_data
+    from tactus_model.utils.lib_feature_extract import extract_multi_frame_features
 
 
 def par(path):  # Pre-Append ROOT to the path if it's not absolute
@@ -76,7 +76,7 @@ def main():
     '''
     # Load the data from skeleton info file
     X_, Y_, video_indices = load_skeleton_data(SRC_ALL_SKELETONS_TXT, CLASSES)
-    
+
     # Feature processing 
     X, Y = process_skeletonpoints(X_, Y_, video_indices, CLASSES)
     print(f"X.shape = {X.shape}, len(Y) = {len(Y)}")

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
-from sklearn.utils.multiclass import unique_labels
+from sklearn.tactus_model.utils.multiclass import unique_labels
 
 
 def plot_confusion_matrix(y_true, y_pred, classes,
@@ -115,5 +115,3 @@ def draw_action_result(img_display, id, skeleton, str_action_label, ith_img):
         img_display, "P"+str(id % 10)+" "+str_action_label, (TEST_COL, TEST_ROW), font, fontsize, (0, 0, 255), linewidth, cv2.LINE_AA)
     
     prev_ithimg = ith_img
-
-

@@ -61,12 +61,12 @@ if True:  # Include project path
     sys.path.append(ROOT)
     ########### Note ##########
     # utils will be changed in the next commit
-    from utils.lib_classifier import ClassifierOnlineTest
-    from utils.lib_classifier import *
-    import utils.lib_test_images_io as lib_images_io
-    import utils.lib_plot as lib_plot
-    import utils.lib_helpers as lib_commons
-    #from utils.lib_tracker import Tracker # TODO  
+    from tactus_model.utils.lib_classifier import ClassifierOnlineTest
+    from tactus_model.utils.lib_classifier import *
+    import tactus_model.utils.lib_test_images_io as lib_images_io
+    import tactus_model.utils.lib_plot as lib_plot
+    import tactus_model.utils.lib_helpers as lib_commons
+    #from tactus_model.utils.lib_tracker import Tracker # TODO  
 
     from tactus_yolov7 import Yolov7, resize
 
