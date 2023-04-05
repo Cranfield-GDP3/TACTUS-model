@@ -47,11 +47,10 @@ def retrain_only_body_joints(skeleton):
     So, we habe total 26 coordinates now after removal of the first 5 keypoints and 
     addition of keypoint NECK
     '''
+    #depricated
     #new_skeleton = skeleton.copy()[10:]
-    
     #neck_x, neck_y = (skeleton.copy()[6] + skeleton.copy()[8])/2, (skeleton.copy()[7] + skeleton.copy()[9])/2
     #neck_ = np.array([neck_x, neck_y])
-  
     #retrained_skeleton = np.concatenate((neck_,new_skeleton), axis=0)
 
     return skeleton.copy()
@@ -76,8 +75,7 @@ R_THIGH = 8
 STAND_SKEL_NORMED = retrain_only_body_joints(
     get_a_normalized_standing_skeleton())
 
-# -- Functions
-
+# Functions
 
 def extract_multi_frame_features(
         X, Y, video_indices, window_size,
@@ -93,23 +91,15 @@ def extract_multi_frame_features(
     for i, _ in enumerate(video_indices):
 
         # If a new video starts : reset feature generator
-        # TODO: remove print statements
-        if i == 7:
-          print(i, video_indices[i])
-
         if i == 0 or video_indices[i] != video_indices[i-1]:
             fg = FeatureGenerator(window_size, is_adding_noise)
         
         # Get features
-        success, features = fg.add_cur_skeleton(X[i, :], video_indices[i])
+        success, features = fg.add_cur_skeleton(X[i, :])
         if success:  
             X_new.append(features)
             Y_new.append(Y[i])
-
-        # Print
-        if is_print and i % 1000 == 0:
-            print(f"{i}/{N}", end=", ")
-            
+           
     if is_print:
         print("")
     X_new = np.array(X_new)
@@ -144,6 +134,13 @@ class Math():
     def calc_relative_angle_v2(p1, p0, base_angle):
         # compute rotation from {base_angle} to {p0->p1}
         return Math.calc_relative_angle(p1[0], p1[1], p0[0], p0[1], base_angle)
+
+    @staticmethod
+    def calc_joint_2D_angles(first, mid, last):
+      first = np.array(first) # First
+      mid = np.array(mid) # Mid
+      last = np.array(last) # End
+      return np.arctan2(last[1]-mid[1], last[0]-mid[0]) - np.arctan2(first[1]-mid[1], first[0]-mid[0])
 
 
 
@@ -248,11 +245,11 @@ class ProcFtr(object):
         plankle = joints_.get_next_point()
         prankle = joints_.get_next_point()
 
-        class Get12Angles(object):
+        class GetBodyAngles(object):
             def __init__(self):
                 self.j = 0
-                self.f_angles = np.zeros((12,))
-                self.x_lengths = np.zeros((12,))
+                self.f_angles = np.zeros((8,)) #Number of angles included in the features
+                self.x_lengths = np.zeros((8,)) 
 
             def set_next_angle_len(self, next_joint, base_joint, base_angle):
                 angle = Math.calc_relative_angle_v2(
@@ -262,27 +259,31 @@ class ProcFtr(object):
                 self.x_lengths[self.j] = dist
                 self.j += 1
 
-        angle_ = Get12Angles()
+            def set_joint_angles_2d(self, first_joint, mid_joint, last_joint):
+              angle = Math.calc_joint_2D_angles(first_joint, mid_joint, last_joint)
+              dist = Math.calc_dist(first_joint, last_joint)
+              self.f_angles[self.j] = angle
+              self.x_lengths[self.j] = dist
+              self.j += 1
 
-        angle_.set_next_angle_len(prshoulder, pneck, PI)  # r-shoulder
-        angle_.set_next_angle_len(prelbow, prshoulder, PI/2)  # r-elbow
-        angle_.set_next_angle_len(prwrist, prelbow, PI/2)  # r-wrist
+        angle_ = GetBodyAngles()
 
-        angle_.set_next_angle_len(plshoulder, pneck, 0)  
-        angle_.set_next_angle_len(plelbow, plshoulder, PI/2)  
-        angle_.set_next_angle_len(plwrist, plelbow, PI/2)  
+        angle_.set_joint_angles_2d(prshoulder, prelbow, prwrist)
+        angle_.set_joint_angles_2d(prhip, prknee, prankle)
 
-        angle_.set_next_angle_len(prhip, pneck, PI/2+PI/18)
-        angle_.set_next_angle_len(prknee, prhip, PI/2)
-        angle_.set_next_angle_len(prankle, prknee, PI/2)
+        angle_.set_joint_angles_2d(plshoulder, plelbow, plwrist)
+        angle_.set_joint_angles_2d(plhip, plknee, plankle)
 
-        angle_.set_next_angle_len(plhip, pneck, PI/2-PI/18)
-        angle_.set_next_angle_len(plknee, plhip, PI/2)
-        angle_.set_next_angle_len(plankle, plknee, PI/2)
+        angle_.set_joint_angles_2d(prshoulder, prhip, prknee)
+        angle_.set_joint_angles_2d(plshoulder, plhip, plknee)
+
+        angle_.set_joint_angles_2d(plhip, plshoulder, plelbow)
+        angle_.set_joint_angles_2d(prhip, prshoulder, prelbow)
 
         # Output
         features_angles = angle_.f_angles
         features_lens = angle_.x_lengths
+        
         return features_angles, features_lens
 
 # Featuregenerator is a main class for extracting the features from input data
@@ -309,21 +310,13 @@ class FeatureGenerator(object):
         self._lens_deque = deque()
         self._pre_x = None
 
-    def add_cur_skeleton(self, skeleton, indices):
+    def add_cur_skeleton(self, skeleton):
         ''' Input: 26 keypoints skeleton
             Output: Extracted features
         '''
-        # TODO: remove print statements
-        if indices ==1:
-          print("Original values+++++++++++++++\n", skeleton)
-
-        x = retrain_only_body_joints(skeleton)
-
-        if indices ==1:
-          print("Useful values+++++++++++++++\n", x)
-        
+        x = retrain_only_body_joints(skeleton)   
         if not ProcFtr.has_neck_and_thigh(x):
-            print("no neck thigh")
+            #print("no neck thigh")
             self.reset()
             return False, None
 
@@ -336,7 +329,6 @@ class FeatureGenerator(object):
                 x = self._add_noises(x, self._noise_intensity)
             x = np.array(x)
             angles, lens = ProcFtr.joint_pos_2_angle_and_length(x)
-
             # Push to deque
             self._x_deque.append(x)
             self._angles_deque.append(angles) 
@@ -347,34 +339,33 @@ class FeatureGenerator(object):
             # -- Extract features
             if len(self._x_deque) < self._window_size:
                 return False, None
+            else:
+                # -- Feature Normalization ------ 
+                h_list = [ProcFtr.get_body_height(xi) for xi in self._x_deque]
+                mean_height = np.mean(h_list)
+                xnorm_list = [ProcFtr.remove_body_offset(xi)/mean_height
+                              for xi in self._x_deque]
 
-            # -- Feature Normalization ------ 
-            h_list = [ProcFtr.get_body_height(xi) for xi in self._x_deque]
-            mean_height = np.mean(h_list)
-            xnorm_list = [ProcFtr.remove_body_offset(xi)/mean_height
-                            for xi in self._x_deque]
+                # -- Get features: Right now only normalized keypoints are used
+                #TODO: add angles
+                f_poses = self._deque_features_to_1darray(xnorm_list)
 
-            # -- Get features: Right now only normalized keypoints are used
-            #TODO: add angles
-            f_poses = self._deque_features_to_1darray(xnorm_list)
+                f_angles = self._deque_features_to_1darray(self._angles_deque) 
+                f_lens = self._deque_features_to_1darray(self._lens_deque) / mean_height 
 
-            f_angles = self._deque_features_to_1darray(self._angles_deque) 
-            f_lens = self._deque_features_to_1darray(self._lens_deque) / mean_height
+                # -- Get features of motion
+                f_v_center = self._compute_v_center(
+                    self._x_deque, step=1) / mean_height  # len = (t=4)*2 = 8
 
-            # -- Get features of motion
-            f_v_center = self._compute_v_center(
-                self._x_deque, step=1) / mean_height  # len = (t=4)*2 = 8
+                f_v_center = np.repeat(f_v_center, 10) 
 
-            f_v_center = np.repeat(f_v_center, 10) 
-
-            f_v_joints = self._compute_v_all_joints(
-                xnorm_list, step=1)  # len = (t=(5-1)/step)*13*2 = 104
+                f_v_joints = self._compute_v_all_joints(
+                    xnorm_list, step=1)  # len = (t=(5-1)/step)*13*2 = 104
 
 
-            # lengths :130 104 80 60 60 =  434
-            features = np.concatenate((f_poses, f_v_joints, f_v_center))#, f_angles, f_lens))
-            
-            return True, features.copy()
+                # lengths :130 104 80 40 40 =  394
+                features = np.concatenate((f_poses, f_v_joints, f_v_center, f_angles, f_lens))               
+                return True, features.copy()
 
     def _maintain_deque_size(self):
         if len(self._x_deque) > self._window_size:
@@ -394,7 +385,7 @@ class FeatureGenerator(object):
 
     def _compute_v_all_joints(self, xnorm_list, step):
         vel = []
-
+ 
         for i in range(0, len(xnorm_list) - step, step):
             dxdy = xnorm_list[i+step][:] - xnorm_list[i][:]
             vel += dxdy.tolist()
@@ -402,7 +393,8 @@ class FeatureGenerator(object):
 
 
     def _fill_invalid_data(self, x):
-        ''' Fill the missing  elements in x with
+        '''  
+        Fill the missing  elements in x with
             their relative-to-neck position in the preious previsious frame or in this case 'x'
         Argument:
             x : this {np.array} contains the skeleton points which has atleast a neck and hip keypoints
