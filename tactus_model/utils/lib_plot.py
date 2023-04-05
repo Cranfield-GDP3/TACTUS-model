@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
-from sklearn.tactus_model.utils.multiclass import unique_labels
+from sklearn.utils.multiclass import unique_labels
 
 
 def plot_confusion_matrix(y_true, y_pred, classes,
