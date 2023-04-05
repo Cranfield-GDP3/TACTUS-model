@@ -25,21 +25,21 @@ How to use this script?
 
 1. Usage on video file:
 python src/test.py \
-    --model_path model/trained_classifier.pickle \
+    --model_path models/trained_classifier.pickle \
     --data_type video \
     --data_path data_test/exercise.avi \
     --output_folder output
     
 2. Test on a folder of images:
 python src/test.py \
-    --model_path model/trained_classifier.pickle \
+    --model_path models/trained_classifier.pickle \
     --data_type folder \
-    --data_path data_test/apple/ \
+    --data_path data_test/<folder name>/ \
     --output_folder output
 
 3. Test on web camera:
 python src/test.py \
-    --model_path model/trained_classifier.pickle \
+    --model_path models/trained_classifier.pickle \
     --data_type webcam \
     --data_path 0 \
     --output_folder output
@@ -96,7 +96,7 @@ def get_command_line_arguments():
             description="Test action recognition on \n"
             "(1) a video, (2) a folder of images, (3) or web camera.")
         parser.add_argument("-m", "--model_path", required=False,
-                            default='model/trained_classifier.pickle')
+                            default='models/trained_classifier.pickle')
         parser.add_argument("-t", "--data_type", required=False, default='webcam',
                             choices=["video", "folder", "webcam"])
         parser.add_argument("-p", "--data_path", required=False, default="",
