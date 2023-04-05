@@ -379,7 +379,7 @@ if __name__ == "__main__":
               # Print label of a person
               if len(yolo_tracker_dict):
                   min_id = min(yolo_tracker_dict.keys())
-                  print("prediced label is :", dict_id2label[min_id])
+                  print("prediced label is :", dict_id2label)
 
               # -- Display image, and write to video.avi
               #video_writer.write(img_disp)
