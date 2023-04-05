@@ -21,7 +21,7 @@ if True:  # Include project path
     CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
     sys.path.append(ROOT)
 
-    from tools.an_example_skeleton_of_standing import get_a_normalized_standing_skeleton
+    from tactus_model.tools.an_example_skeleton_of_standing import get_a_normalized_standing_skeleton
 
 # -- Settings
 NOISE_INTENSITY = 0.05
