@@ -21,7 +21,7 @@ if True:
     CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
     sys.path.append(ROOT)
 
-    import utils.lib_helpers as lib_commons
+    import tactus_model.utils.lib_helpers as lib_commons
 
 
 def par(path):  
