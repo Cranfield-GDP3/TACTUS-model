@@ -5,6 +5,7 @@ classes: ['kicking', 'punching', 'pushing', 'neutral']
 
 features:
   window_size: 5 # Number of adjacent frames for extracting features. 
+  add_augmentation: False #For adding data augmentation
 
 combine_skeletons_info.py:
   input:
