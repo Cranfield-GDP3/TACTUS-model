@@ -99,10 +99,6 @@ def evaluate_model(model, classes, tr_X, tr_Y, te_X, te_Y):
     print("te_Y_predict\n")
     acc["te_Y_predict"] = te_Y_predict
     
-    print("classes\n")
-    print(classes)
-    print(acc)
-    acc.to_csv('/content/SVM_model.csv')
     # Plot accuracy
     axis, cf = lib_plot.plot_confusion_matrix(
         te_Y, te_Y_predict, classes, normalize=False, size=(12, 8))
