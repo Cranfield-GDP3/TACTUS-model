@@ -19,11 +19,25 @@ from sklearn.preprocessing import OneHotEncoder
 #[cn_video, cnt_frame_inside_video, cnt_frame_global, img_action_label, filepath, keypoints]
 
 LEN_IMG_INFO = 5
-LEN_SKELETON_XY = 17*2
+LEN_SKELETON_XY = 13*2
 NaN = 0  
+if True:  
+    import sys
+    import os
+    ROOT = os.path.dirname(os.path.abspath(__file__))+"/../"
+    CURR_PATH = os.path.dirname(os.path.abspath(__file__))+"/"
+    sys.path.append(ROOT)
+
+    import tactus_model.utils.lib_helpers as lib_commons
+
+
+def par(path):  
+    return ROOT + path if (path and path[0] != "/") else path
+
+cfg_all = lib_commons.read_yaml(ROOT + "config/config.yaml")
+DATA_AUGMENT = int(cfg_all["features"]["add_augmentation"]) 
 
 # Function to load the skeletons_data
-
 
 def load_skeleton_data(filepath, classes):
     ''' Load training data from skeletons_info.txt.
@@ -56,8 +70,12 @@ def load_skeleton_data(filepath, classes):
                       for row in dataset])
     
         # row[0] is the video index of the image
-        video_indices = [row[0] for row in dataset] #row[1] for previous
-        Y_str = [row[3] for row in dataset]
+        if not DATA_AUGMENT:
+            video_indices = [row[0] for row in dataset] 
+        else:
+            video_indices = [row[1] for row in dataset] 
+            
+        Y_str = [row[3] for row in dataset] #for labels
 
         Y = [idx_label[label] for label in Y_str]
 
@@ -88,7 +106,7 @@ def _get_skeletons_with_complete_upper_body(X, NaN=0):
     Return the indices of these skeletons.
    '''
 
-    left_idx, right_idx = 0, 14 * 2  # TODO: modify for a new format
+    left_idx, right_idx = 0, 13 * 2  # TODO: will be redundant in case of YOLOv7
 
     def is_valid(x):
         return len(np.where(x[left_idx:right_idx] == NaN)[0]) == 0
