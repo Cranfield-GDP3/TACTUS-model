@@ -274,6 +274,29 @@ def remove_skeletons_with_few_joints(skeletons):
             good_skeletons.append(skeleton)
     return good_skeletons
 
+def retrain_keypoints(skeleton):
+    ''' 
+    Redundant Joints for this usecase
+    {0,  "Nose"},
+    {1,  "LEye"},
+    {2,  "REye"},
+    {3,  "LEar"},
+    {4,  "REar"},
+    are removed 
+
+    Neck point or center point is calculated using the midppoint of 3: LEar and 4: REar
+    So, we habe total 26 coordinates now after removal of the first 5 keypoints and 
+    addition of keypoint NECK
+    '''
+    
+    new_skeleton = skeleton.copy()[10:]
+    neck_x, neck_y = (skeleton.copy()[6] + skeleton.copy()[8])/2, (skeleton.copy()[7] + skeleton.copy()[9])/2
+    neck_ = np.array([neck_x, neck_y])
+    retrained_skeleton = np.concatenate((neck_,new_skeleton), axis=0)
+
+    return retrained_skeleton
+
+
 
 def draw_result_img(img_disp, ith_img, humans, dict_id2skeleton,
                     skeleton_detector, multiperson_classifier):
@@ -356,14 +379,17 @@ if __name__ == "__main__":
             
             img = resize(img)
             skeletons_  = model_yolov7.predict_frame(img)
-            print(skeletons_)
+            #print(skeletons_)
             tracking_id = retracker.deepsort_track_frame(deepsort_tracker, img, skeletons_)
             print(tracking_id)
-            if ith_img>2:
+
+            if ith_img>2 and tracking_id:
         
               skeleton_points=[]
               for human in skeletons_:
-                skeleton_points.append([human["keypoints"][i] for i in range(len(human["keypoints"])) if (i+1) % 3 != 0])
+                human_ = [human["keypoints"][i] for i in range(len(human["keypoints"])) if (i+1) % 3 != 0]
+                used_keypoints  = retrain_keypoints(human_)
+                skeleton_points.append(used_keypoints)
             
               ske_dict = [(key, value)for i, (key, value) in enumerate(zip(tracking_id, skeleton_points))]
             
@@ -384,12 +410,6 @@ if __name__ == "__main__":
               # -- Display image, and write to video.avi
               #video_writer.write(img_disp)
 
-              # -- Get skeleton data and save to file
-              skels_to_save = get_the_skeleton_data_to_save_to_disk(yolo_tracker_dict)
-              lib_commons.save_listlist(
-                DST_FOLDER + DST_SKELETON_FOLDER_NAME +
-                SKELETON_FILENAME_FORMAT.format(ith_img),
-                skels_to_save)
           
     finally:
         #video_writer.stop()
