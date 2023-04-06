@@ -63,7 +63,7 @@ class FeatureTracker:
         """delete a SkeletonRollingWindow from its ID"""
         del self.rolling_windows[track_id]
 
-    def extract(self) -> Generator[int, np.ndarray]:
+    def extract(self) -> Generator[tuple[int, np.ndarray], None, None]:
         """
         Extract features from each SkeletonRollingWindow
 
