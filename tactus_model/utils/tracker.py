@@ -24,8 +24,14 @@ class FeatureTracker:
     High level interface with rolling windows of skeletons and their
     tracking with deepsort.
     """
-    def __init__(self, deepsort_tracker: DeepSort = None, window_size: int = 5):
+    def __init__(self,
+                 deepsort_tracker: DeepSort = None,
+                 window_size: int = 5,
+                 angles_to_compute: list[tuple[int, int, int]] = None
+                 ):
         self.window_size = window_size
+        self.angles_to_compute = angles_to_compute
+
         self.rolling_windows: dict[int, SkeletonRollingWindow]
         self.rolling_windows = {}
 
@@ -38,7 +44,7 @@ class FeatureTracker:
         """run the tracker on each skeleton and update their rolling
         window"""
         tracks: list[Track]
-        tracks = retracker.deepsort_track_frame(self.deepsort, frame, skeletons)
+        tracks = retracker.deepsort_track_frame(self.deepsort, frame, skeletons, new_version=True)
 
         for i, track in enumerate(tracks):
             if track.is_confirmed():
@@ -49,7 +55,7 @@ class FeatureTracker:
     def update_rolling_window(self, track_id: int, skeleton: dict):
         """update a SkeletonRollingWindow from its ID"""
         if track_id not in self.rolling_windows:
-            self.rolling_windows[id] = SkeletonRollingWindow(self.window_size)
+            self.rolling_windows[id] = SkeletonRollingWindow(self.window_size, self.angles_to_compute)
 
         self.rolling_windows[id].add_skeleton(skeleton["keypoints"])
 
