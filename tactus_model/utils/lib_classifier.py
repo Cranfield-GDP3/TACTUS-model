@@ -95,7 +95,7 @@ class ClassifierOfflineTrain(object):
         self.model_name = None
         self.classifiers = [
             KNeighborsClassifier(5),
-            SVC(kernel="linear", C=10.0),
+            SVC(kernel="linear", C=10.0, probability=True),
             SVC(gamma=0.01, C=1.0, verbose=True),
             GaussianProcessClassifier(1.0 * RBF(1.0)),
             DecisionTreeClassifier(max_depth=5),
