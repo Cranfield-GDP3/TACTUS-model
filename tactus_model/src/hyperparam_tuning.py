@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import numpy as np
 from tactus_data import skeletonization, data_augment
+from tactus_data.datasets.ut_interaction import data_split
 from tactus_model.utils.tracker import FeatureTracker
 from tactus_model.utils.classifier import Classifier
 
@@ -42,11 +43,21 @@ DATA_AUGMENT_GRIDS = {
     #     "rotation_x": [-30, 0, 30],
     # },
     "Nothing": {},
-    "SMALLER_GRID": [  # grid size: 26
+    "SMALLER_GRID": [  # grid size: 32
         {
             "horizontal_flip": [True, False],
-            "scale_x": np.linspace(0.8, 1.2, 2),
-            "scale_y": np.linspace(0.8, 1.2, 2),
+            "scale_x": [1, 1.2],
+            "scale_y": [0.8, 1],
+        },
+        {
+            "horizontal_flip": [True, False],
+            "scale_x": [0.8],
+            "scale_y": [1.2, 1],
+        },
+        {
+            "horizontal_flip": [True, False],
+            "scale_x": [1],
+            "scale_y": [1.2],
         },
         {
             "horizontal_flip": [True, False],
@@ -82,7 +93,7 @@ CLASSIFIER_HYPERPARAMS = {
 def get_classifier():
     for classifier_name, hyperparams_grid in CLASSIFIER_HYPERPARAMS.items():
         for hyperparams in data_augment.ParameterGrid(hyperparams_grid):
-            yield Classifier(classifier_name, hyperparams)
+            yield Classifier(classifier_name, hyperparams), classifier_name, hyperparams
 
 
 def get_augment_grid():
@@ -97,12 +108,13 @@ def get_tracker_grid():
 
 def train(fps: int = 10):
     # cant use a generator here because we use this multiple times
-    videos = list(Path("data/processed/ut_interaction/").iterdir())
+    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 15))
 
+    count = 0
     for augment_grid in get_augment_grid():
         # augments data and saves it in files
         print("augments data")
-        for video_path in videos:
+        for video_path in train_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
 
@@ -112,15 +124,33 @@ def train(fps: int = 10):
             angle_list = get_angle_list(tracker_grid["number_of_angles"])
             window_size = tracker_grid["window_size"]
 
-            X, Y = generate_features(videos, fps, window_size, angle_list)
+            X, Y = generate_features(train_videos, fps, window_size, angle_list)
+            X_test, Y_test = generate_features(test_videos, fps, window_size, angle_list)
 
-            for classifier in get_classifier():
+            save_file = {}
+            save_file["augment_grid"] = augment_grid
+            save_file["tracker_grid"] = tracker_grid
+            for classifier, classifier_name, hyperparams in get_classifier():
                 print("fit classifier")
                 classifier.fit(X, Y)
 
+                save_file["classifier_name"] = classifier_name
+                save_file["hyperparams"] = hyperparams
+                save_file["y_pred_train"] = classifier.predict(X)
+                save_file["y_pred_proba_train"] = classifier.predict_proba(X)
+                save_file["y_true_train"] = Y
+                save_file["y_pred_test"] = classifier.predict(X_test)
+                save_file["y_pred_proba_test"] = classifier.predict_proba(X_test)
+                save_file["y_true_test"] = Y_test
+
+                filename = Path(f"data/models/evaluation/{count}.json")
+                json.dump(save_file, filename.open(w))
+
+                count += 1
+
         # delete every augmentation data. Necessary in case the new
         # augmentation is smaller than the former one
-        for video_path in videos:
+        for video_path in train_videos:
             for augmented_data_path in video_path.glob("*_augment_*"):
                 augmented_data_path.unlink()
 
@@ -133,7 +163,7 @@ def generate_features(videos: list[Path], fps: int, window_size: int, angle_list
         label_path = video_path / (f"{video_path.stem}.label.json")
         labels = json.load(label_path.open())
 
-        for augmented_data_path in video_path.glob(f"{fps}fps/yolov7.json"):
+        for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*.json"):
             augmented_data = json.load(augmented_data_path.open())
 
             video_features, video_labels = feature_from_video(augmented_data, labels, window_size, angle_list)
@@ -145,7 +175,7 @@ def generate_features(videos: list[Path], fps: int, window_size: int, angle_list
 
 
 def feature_from_video(augmented_data: dict,
-                       labels: int,
+                       labels: dict,
                        window_size: int,
                        angle_list: list):
     feature_tracker = FeatureTracker(window_size=window_size, angles_to_compute=angle_list)
@@ -155,8 +185,13 @@ def feature_from_video(augmented_data: dict,
 
     offender_id = labels["offender"][0]
 
-    for frame in augmented_data["frames"]:
+    i_label = 0
+    i_frame = max(labels["classes"][i_label]["start_frame"] - window_size, 0)
+    while i_frame < len(augmented_data["frames"]):
+        frame = augmented_data["frames"][i_frame]
+
         for skeleton in frame["skeletons"]:
+            # do not deal with untracked skeletons
             if "id_stupid" not in skeleton:
                 continue
 
@@ -165,34 +200,37 @@ def feature_from_video(augmented_data: dict,
                                                   has_head=False,
                                                   has_confidence=False)
 
-        offenser_label = compute_label(frame["frame_id"], labels["classes"])
-
         for skeleton_id, (success, features) in feature_tracker.extract():
             if not success:
                 continue
 
             if skeleton_id == offender_id:
-                label = offenser_label
+                label = compute_label(frame["frame_id"], labels["classes"], i_label)
             else:
                 label = "neutral"
 
             video_features.append(features)
             video_labels.append(label_to_int(label))
 
+        # jump to the next action
+        if i_label >= labels["classes"][i_label]["end_frame"]:
+            if len(labels["classes"]) > i_label:
+                i_label += 1
+                i_frame = labels["classes"][i_label]["start_frame"] - window_size
+                feature_tracker.reset_rolling_windows()
+            else:
+                break
+        else:
+            i_frame += 1
+
     return video_features, video_labels
 
 
-def compute_label(frame_id: str, classes: list[dict]) -> str:
+def compute_label(frame_id: str, classes: list, i_label: int) -> str:
     frame_id = int(frame_id.removesuffix(".jpg"))
 
-    i_class = 0
-    start_frame = classes[0]["start_frame"]
-    while i_class + 1 < len(classes) and frame_id < start_frame:
-        i_class += 1
-        start_frame = classes[i_class]["start_frame"]
-
-    if frame_id < classes[i_class]["end_frame"]:
-        return classes[i_class]["classification"]
+    if classes[i_label]["start_frame"] < frame_id < classes[i_label]["end_frame"]:
+        return classes[i_label]["classification"]
 
     return "neutral"
 
