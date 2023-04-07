@@ -121,7 +121,7 @@ def train(fps: int = 10):
     for augment_grid in get_augment_grid():
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
-        for video_path in train_videos:
+        for video_path in train_videos + test_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
 
@@ -144,10 +144,8 @@ def train(fps: int = 10):
                 save_file["classifier_name"] = classifier_name
                 save_file["hyperparams"] = hyperparams
                 save_file["y_pred_train"] = classifier.predict(X)
-                save_file["y_pred_proba_train"] = classifier.predict_proba(X)
                 save_file["y_true_train"] = Y
                 save_file["y_pred_test"] = classifier.predict(X_test)
-                save_file["y_pred_proba_test"] = classifier.predict_proba(X_test)
                 save_file["y_true_test"] = Y_test
 
                 filename = Path(f"data/models/evaluation/{count}.json")
