@@ -143,13 +143,13 @@ def train(fps: int = 10):
 
                 save_file["classifier_name"] = classifier_name
                 save_file["hyperparams"] = hyperparams
-                save_file["y_pred_train"] = classifier.predict(X)
+                save_file["y_pred_train"] = classifier.predict(X).tolist()
                 save_file["y_true_train"] = Y
-                save_file["y_pred_test"] = classifier.predict(X_test)
+                save_file["y_pred_test"] = classifier.predict(X_test).tolist()
                 save_file["y_true_test"] = Y_test
 
                 filename = Path(f"data/models/evaluation/{count}.json")
-                json.dump(save_file, filename.open(w))
+                json.dump(save_file, filename.open(mode="w"))
 
                 count += 1
 
