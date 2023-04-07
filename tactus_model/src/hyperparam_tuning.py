@@ -113,7 +113,6 @@ def train(fps: int = 10):
             window_size = tracker_grid["window_size"]
 
             X, Y = generate_features(videos, fps, window_size, angle_list)
-            print(len(Y))
 
             for classifier in get_classifier():
                 print("fit classifier")
@@ -149,7 +148,7 @@ def feature_from_video(augmented_data: dict,
                        labels: int,
                        window_size: int,
                        angle_list: list):
-    feature_tracker = FeatureTracker(window_size, angles_to_compute=angle_list)
+    feature_tracker = FeatureTracker(window_size=window_size, angles_to_compute=angle_list)
 
     video_features = []
     video_labels = []
