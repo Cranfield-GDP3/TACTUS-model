@@ -16,26 +16,29 @@ AVAILABLE_MODELS = {
 
 
 class Classifier:
-    def __init__(self, classifier: str, hyperparams: dict) -> None:
-        self.clf = AVAILABLE_MODELS[classifier](**hyperparams)
+    def __init__(self, classifier: str = None, hyperparams: dict = None) -> None:
+        self.clf = None
+        if classifier is not None and hyperparams is not None:
+            self.clf = AVAILABLE_MODELS[classifier](**hyperparams)
         self.pca = None
 
     def load(self, model_weights_path: Path):
         self.clf = pickle.load(model_weights_path.open("rb"))
+        return self
 
     def save(self, save_path: Path):
-        pickle.dump(self, save_path.open(mode="rb"))
+        pickle.dump(self, save_path.open(mode="wb"))
 
     def fit_pca(self, X: np.ndarray, min_pca_features: int = 50):
         n_components = min(min_pca_features, X.shape[1])
         self.pca = PCA(n_components=n_components, whiten=True)
-        self.pca.fit(X)
+        return self.pca.fit(X)
 
     def fit(self, X, Y):
-        self.clf.fit(X, Y)
+        return self.clf.fit(X, Y)
 
     def predict(self, X):
-        self.clf.predict(X)
+        return self.clf.predict(X)
 
     def predict_proba(self, X):
-        self.clf.predict_proba(X)
+        return self.clf.predict_proba(X)
