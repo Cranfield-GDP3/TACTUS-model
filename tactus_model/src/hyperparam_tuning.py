@@ -42,28 +42,28 @@ DATA_AUGMENT_GRIDS = {
     #     "rotation_z": [-10, 0, 10],
     #     "rotation_x": [-30, 0, 30],
     # },
-    "Nothing": {},
+    "Flip": {"horizontal_flip": [True, False]},
     "SMALLER_GRID": [  # grid size: 32
-        {
-            "horizontal_flip": [True, False],
-            "scale_x": [1, 1.2],
-            "scale_y": [0.8, 1],
-        },
+        # {
+        #     "horizontal_flip": [True, False],
+        #     "scale_x": [1, 1.2],
+        #     "scale_y": [0.8, 1],
+        # },
         {
             "horizontal_flip": [True, False],
             "scale_x": [0.8],
             "scale_y": [1.2, 1],
         },
-        {
-            "horizontal_flip": [True, False],
-            "scale_x": [1],
-            "scale_y": [1.2],
-        },
-        {
-            "horizontal_flip": [True, False],
-            "rotation_y": np.linspace(-30, 30, 3),
-            "rotation_x": np.linspace(-20, 20, 3),
-        },
+        # {
+        #     "horizontal_flip": [True, False],
+        #     "scale_x": [1],
+        #     "scale_y": [1.2],
+        # },
+        # {
+        #     "horizontal_flip": [True, False],
+        #     "rotation_y": np.linspace(-30, 30, 3),
+        #     "rotation_x": np.linspace(-20, 20, 3),
+        # },
     ]
 }
 
@@ -108,19 +108,26 @@ def get_tracker_grid():
 
 def train(fps: int = 10):
     # cant use a generator here because we use this multiple times
-    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 15))
+    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
 
     count = 0
+
+    # delete every augmentation data. Necessary in case the new
+    # augmentation is smaller than the former one
+    for video_path in train_videos + test_videos:
+        for augmented_data_path in video_path.rglob("*_augment_*"):
+            augmented_data_path.unlink()
+
     for augment_grid in get_augment_grid():
         # augments data and saves it in files
-        print("augments data")
+        print("augments data with: ", augment_grid)
         for video_path in train_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
 
         # compute features
         for tracker_grid in get_tracker_grid():
-            print("compute features")
+            print("compute features with: ", tracker_grid)
             angle_list = get_angle_list(tracker_grid["number_of_angles"])
             window_size = tracker_grid["window_size"]
 
@@ -131,7 +138,7 @@ def train(fps: int = 10):
             save_file["augment_grid"] = augment_grid
             save_file["tracker_grid"] = tracker_grid
             for classifier, classifier_name, hyperparams in get_classifier():
-                print("fit classifier")
+                print("fit classifier: ", classifier_name, " - ", hyperparams)
                 classifier.fit(X, Y)
 
                 save_file["classifier_name"] = classifier_name
@@ -147,12 +154,6 @@ def train(fps: int = 10):
                 json.dump(save_file, filename.open(w))
 
                 count += 1
-
-        # delete every augmentation data. Necessary in case the new
-        # augmentation is smaller than the former one
-        for video_path in train_videos:
-            for augmented_data_path in video_path.glob("*_augment_*"):
-                augmented_data_path.unlink()
 
 
 def generate_features(videos: list[Path], fps: int, window_size: int, angle_list: list):
