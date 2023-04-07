@@ -52,8 +52,9 @@ class FeatureTracker:
         for i, track in enumerate(tracks):
             if track.is_confirmed():
                 self.update_rolling_window(track.track_id, skeletons[i])
-            elif track.is_deleted():
-                self.delete_track_id(track.track_id)
+
+        for track_id in self.deepsort.tracker.del_tracks_ids:
+            self.delete_track_id(track_id)
 
     def update_rolling_window(self, track_id: int, skeleton: dict, has_head: bool = True, has_confidence: bool = True):
         """update a SkeletonRollingWindow from its ID"""
