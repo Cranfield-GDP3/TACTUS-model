@@ -33,12 +33,15 @@ class FeatureTracker:
         self.angles_to_compute = angles_to_compute
 
         self.rolling_windows: dict[int, SkeletonRollingWindow]
-        self.rolling_windows = {}
+        self.reset_rolling_windows()
 
         if deepsort_tracker is None:
             self.deepsort = DeepSort(n_init=3, max_age=5)
         else:
             self.deepsort = deepsort_tracker
+
+    def reset_rolling_windows(self):
+        self.rolling_windows = {}
 
     def track_skeletons(self, skeletons, frame: np.ndarray):
         """run the tracker on each skeleton and update their rolling
@@ -52,12 +55,12 @@ class FeatureTracker:
             elif track.is_deleted():
                 self.delete_track_id(track.track_id)
 
-    def update_rolling_window(self, track_id: int, skeleton: dict):
+    def update_rolling_window(self, track_id: int, skeleton: dict, has_head: bool = True, has_confidence: bool = True):
         """update a SkeletonRollingWindow from its ID"""
         if track_id not in self.rolling_windows:
-            self.rolling_windows[id] = SkeletonRollingWindow(self.window_size, self.angles_to_compute)
+            self.rolling_windows[track_id] = SkeletonRollingWindow(self.window_size, self.angles_to_compute)
 
-        self.rolling_windows[id].add_skeleton(skeleton["keypoints"])
+        self.rolling_windows[track_id].add_skeleton(skeleton, has_head, has_confidence)
 
     def delete_track_id(self, track_id: int):
         """delete a SkeletonRollingWindow from its ID"""
