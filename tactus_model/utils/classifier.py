@@ -63,7 +63,7 @@ class Classifier:
         save_path : Path
             where to save the model weights.
         """
-        #save_path.mkdir(parents=True, exist_ok=True)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         pickle.dump(self, save_path.open(mode="wb"))
 
     def fit_pca(self, X: Union[np.ndarray, List[List]], Y = None, *, min_pca_features: int = 50):
