@@ -6,13 +6,13 @@ from tactus_data import skeletonization, data_augment
 from tactus_data.datasets.ut_interaction import data_split
 from tactus_model.utils.tracker import FeatureTracker
 from tactus_model.utils.classifier import Classifier
-from tqdm import tqdm
 
 AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 
 
 DATA_AUGMENT_GRIDS = {
+    "FLIP": {"horizontal_flip": [True, False]},
     "SMALL_GRID": {
         "noise_amplitude": [0, 2, 4],
         "horizontal_flip": [True, False],
@@ -49,22 +49,22 @@ DATA_AUGMENT_GRIDS = {
 }
 
 
-TRACKER_GRID = {  # grid size: 12
-    "window_size": [3, 5, 9, 15],  # impact velocity
-    "number_of_angles": [0, 4, 8],
+TRACKER_GRID = {  # grid size: 6
+    "window_size": [3, 5, 9],  # impact velocity
+    "number_of_angles": [0, 8],
 }
 
 
-CLASSIFIER_HYPERPARAMS = { #grid size : 6
+CLASSIFIER_HYPERPARAMS = { #grid size : 24
     "MLPClassifier": {
-        "batch_size": [64,256],
-        "max_iter": [20,40,60,100],
-        "loss_function": ["SparseCategoricalCrossEntropy"],
-        "hidden_layer": [(256,128,16,),(1024,512,128,16,),(512,64,32,)],
-        "activation": ['tanh','relu','sigmoid'],
-        "alpha": [0.05,0.1,0.01],
-        "solver": ['adam', 'sgd'],
-        "learning_rate": ['constant','adaptative'],
+        "batch_size": [256],
+        "max_iter": [300],
+        #"loss_function": ["SparseCategoricalCrossEntropy"],
+        "hidden_layer_sizes": [(256,128,16,),(1024,512,128,16,),(512,64,32,)],
+        "activation": ['tanh','relu'],
+        "alpha": [0.05,0.1,1],
+        "solver": ['adam'],
+        "learning_rate": ['adaptive'],
         #"dropout_layer": [0,0.2,0.4],
         "random_state": [42],
     },
@@ -137,7 +137,7 @@ def train(fps: int = 10):
             data_augment.grid_augment(original_data_path, augment_grid)
 
         # compute features
-        for tracker_grid in tqdm(get_tracker_grid()):
+        for tracker_grid in get_tracker_grid():
             print("compute features with: ", tracker_grid)
             angle_list = get_angle_list(tracker_grid["number_of_angles"])
             window_size = tracker_grid["window_size"]
@@ -150,7 +150,7 @@ def train(fps: int = 10):
             save_file["tracker_grid"] = tracker_grid
             for classifier, classifier_name, hyperparams in get_classifier():
                 print("fit classifier: ", classifier_name, " - ", hyperparams)
-                classifier.fit(X, Y)
+                loss_history = classifier.fit(X, Y).loss_curve_
 
                 save_file["classifier_name"] = classifier_name
                 save_file["hyperparams"] = hyperparams
@@ -158,9 +158,12 @@ def train(fps: int = 10):
                 save_file["y_true_train"] = Y
                 save_file["y_pred_test"] = classifier.predict(X_test).tolist()
                 save_file["y_true_test"] = Y_test
-
-                filename = Path(f"./data/models/evaluation/{count}.json")
+                save_file["loss_history"] = loss_history
+                filename = Path(f"data/models/evaluation/{count}.json")
                 json.dump(save_file, filename.open(mode="w"))
+
+
+                classifier.save(Path(f"data/models/pickle/{count}.json"))
 
                 count += 1
 
@@ -197,7 +200,6 @@ def generate_features(videos: List[Path], fps: int, window_size: int, angle_list
 
         for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*.json"):
             augmented_data = json.load(augmented_data_path.open())
-
             video_features, video_labels = feature_from_video(augmented_data, labels, window_size, angle_list)
 
             X.extend(video_features)
