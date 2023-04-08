@@ -1,6 +1,6 @@
+from typing import List, Dict, Tuple
 import json
 from pathlib import Path
-import numpy as np
 from tactus_data import skeletonization, data_augment
 from tactus_data.datasets.ut_interaction import data_split
 from tactus_model.utils.tracker import FeatureTracker
@@ -107,20 +107,23 @@ def get_tracker_grid():
 
 
 def train(fps: int = 10):
+    """
+    launch the training process
+
+    Parameters
+    ----------
+    fps : int, optional
+        the fps to train on, by default 10
+    """
     # cant use a generator here because we use this multiple times
     train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
 
     count = 0
-
-    # delete every augmentation data. Necessary in case the new
-    # augmentation is smaller than the former one
-    for video_path in train_videos + test_videos:
-        for augmented_data_path in video_path.rglob("*_augment_*"):
-            augmented_data_path.unlink()
-
     for augment_grid in get_augment_grid():
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
+        delete_data_augment(train_videos + test_videos, fps)
+
         for video_path in train_videos + test_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
@@ -154,7 +157,29 @@ def train(fps: int = 10):
                 count += 1
 
 
-def generate_features(videos: list[Path], fps: int, window_size: int, angle_list: list):
+def generate_features(videos: List[Path], fps: int, window_size: int, angle_list: List):
+    """
+    generates features for a list of video directories. The directories
+    must follow the following structure:
+    `video_name -> label.json`
+    `video_name -> xxfps -> data.json`
+
+    Parameters
+    ----------
+    videos : List[Path]
+        list of the video directories.
+    fps : int
+        the fps to generate features with.
+    window_size : int
+        the size of the rolling window.
+    angle_list : List
+        the list of the angles to compute.
+
+    Returns
+    -------
+    (X, Y)
+        return a tuple with the features and the labels.
+    """
     X = []
     Y = []
 
@@ -173,10 +198,30 @@ def generate_features(videos: list[Path], fps: int, window_size: int, angle_list
     return X, Y
 
 
-def feature_from_video(augmented_data: dict,
-                       labels: dict,
+def feature_from_video(formatted_json: Dict,
+                       labels: Dict,
                        window_size: int,
-                       angle_list: list):
+                       angle_list: List):
+    """
+    Compute features and true labels from a `json video` file.
+
+    Parameters
+    ----------
+    formatted_json : Dict
+        video json file containing the list of frames and their
+        skeletons.
+    labels : Dict
+        the content of the video label file.
+    window_size : int
+        the size of the rolling window.
+    angle_list : List
+        the list of angles to compute in the features.
+
+    Returns
+    -------
+    (X, Y)
+        return a tuple with the features and the labels.
+    """
     feature_tracker = FeatureTracker(window_size=window_size, angles_to_compute=angle_list)
 
     video_features = []
@@ -186,27 +231,22 @@ def feature_from_video(augmented_data: dict,
 
     i_label = 0
     i_frame = max(labels["classes"][i_label]["start_frame"] - window_size, 0)
-    while i_frame < len(augmented_data["frames"]):
-        frame = augmented_data["frames"][i_frame]
+    while i_frame < len(formatted_json["frames"]):
+        frame = formatted_json["frames"][i_frame]
 
         for skeleton in frame["skeletons"]:
             # do not deal with untracked skeletons
-            if "id_stupid" not in skeleton:
-                continue
-
-            feature_tracker.update_rolling_window(skeleton["id_stupid"],
-                                                  skeleton,
-                                                  has_head=False,
-                                                  has_confidence=False)
+            if "id_stupid" in skeleton:
+                feature_tracker.update_rolling_window(
+                    skeleton["id_stupid"], skeleton,
+                    has_head=False, has_confidence=False)
 
         for skeleton_id, (success, features) in feature_tracker.extract():
-            if not success:
-                continue
-
-            if skeleton_id == offender_id:
-                label = compute_label(frame["frame_id"], labels["classes"], i_label)
-            else:
-                label = "neutral"
+            if success:
+                if skeleton_id == offender_id:
+                    label = compute_label(frame["frame_id"], labels["classes"], i_label)
+                else:
+                    label = "neutral"
 
             video_features.append(features)
             video_labels.append(label_to_int(label))
@@ -225,7 +265,25 @@ def feature_from_video(augmented_data: dict,
     return video_features, video_labels
 
 
-def compute_label(frame_id: str, classes: list, i_label: int) -> str:
+def compute_label(frame_id: str, classes: List[Dict], i_label: int) -> str:
+    """
+    compute the label of the offender for a given frame.
+
+    Parameters
+    ----------
+    frame_id : str
+        the frame id. Usually "xxx.jpg".
+    classes : list
+        list of labels `classes`. It must have `end_frame`,
+        `end_frame`, `classification` keys.
+    i_label : int
+        the index of the current class.
+
+    Returns
+    -------
+    str
+        the corresponding label.
+    """
     frame_id = int(frame_id.removesuffix(".jpg"))
 
     if classes[i_label]["start_frame"] < frame_id < classes[i_label]["end_frame"]:
@@ -235,10 +293,25 @@ def compute_label(frame_id: str, classes: list, i_label: int) -> str:
 
 
 def label_to_int(label: str) -> int:
+    """transform a label to its corresponding integer."""
     return AVAILABLE_CLASSES.index(label)
 
 
-def get_angle_list(number_of_angles: int) -> list[tuple[int, int, int]]:
+def get_angle_list(number_of_angles: int) -> List[Tuple[int, int, int]]:
+    """
+    get predefined list of angles to compute from the number
+    of angles we would like.
+
+    Parameters
+    ----------
+    number_of_angles : int
+        number of angles to compute. Must be 0, 4 or 8.
+
+    Returns
+    -------
+    list[tuple[int, int, int]]
+        the list of angles to compute.
+    """
     if number_of_angles == 0:
         return []
 
@@ -247,3 +320,20 @@ def get_angle_list(number_of_angles: int) -> list[tuple[int, int, int]]:
 
     if number_of_angles == 8:
         return skeletonization.BK.MEDIUM_ANGLE_LIST
+
+
+def delete_data_augment(video_paths: List[Path], fps: int):
+    """
+    delete every augmentation data. Necessary in case the new
+    augmentation is smaller than the former one.
+
+    Parameters
+    ----------
+    video_paths : List[Path]
+        list of the video directories.
+    fps : int
+        the fps of the data augmentation to delete.
+    """
+    for video_path in video_paths:
+        for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*"):
+            augmented_data_path.unlink()
