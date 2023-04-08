@@ -6,34 +6,46 @@ from tactus_data import skeletonization, data_augment
 from tactus_data.datasets.ut_interaction import data_split
 from tactus_model.utils.tracker import FeatureTracker
 from tactus_model.utils.classifier import Classifier
+from tqdm import tqdm
 
 AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 
+
 DATA_AUGMENT_GRIDS = {
-    "Flip": {"horizontal_flip": [True, False]},
-    "SMALLER_GRID": [  # grid size: 32
-        {
-            "horizontal_flip": [True, False],
-            "scale_x": [1, 1.2],
-            "scale_y": [0.8, 1],
-        },
-        {
-            "horizontal_flip": [True, False],
-            "scale_x": [0.8],
-            "scale_y": [1.2, 1],
-        },
-        {
-            "horizontal_flip": [True, False],
-            "scale_x": [1],
-            "scale_y": [1.2],
-        },
-        {
-            "horizontal_flip": [True, False],
-            "rotation_y": np.linspace(-30, 30, 3),
-            "rotation_x": np.linspace(-20, 20, 3),
-        },
-    ]
+    "SMALL_GRID": {
+        "noise_amplitude": [0, 2, 4],
+        "horizontal_flip": [True, False],
+        "rotation_y": [-30, 0, 30],
+        "rotation_z": [-10, 0, 10],
+        "rotation_x": [-30, 0, 30],
+    },
+    "DEFAULT_GRID": {
+        "noise_amplitude": [0, 3],
+        "horizontal_flip": [True, False],
+        "rotation_y": [-30, 0, 30],
+        "rotation_z": [-10, 0, 10],
+        "rotation_x": [-30, 0, 30],
+        "scale_x": [0.8, 1, 1.2],
+        "scale_y": [0.8, 1, 1.2],
+    },
+    "MED_GRID": {
+        "noise_amplitude": [0, 3],
+        "horizontal_flip": [True, False],
+        "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
+        "rotation_z": [-10, 0, 10],
+        "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
+    },
+    "BIG_GRID": {
+        "noise_amplitude": [0, 3],
+        "horizontal_flip": [True, False],
+        "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
+        "rotation_z": [-10, 0, 10],
+        "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
+        "scale_x": [0.9, 1.1],
+        "scale_y": [0.9, 1.1],
+    },
+
 }
 
 
@@ -43,11 +55,18 @@ TRACKER_GRID = {  # grid size: 12
 }
 
 
-CLASSIFIER_HYPERPARAMS = {
-    "SVC": {
-        "C": [0.5, 1, 2],
-        "kernel": ['rbf'],
-        "gamma": ['scale','auto'],
+CLASSIFIER_HYPERPARAMS = { #grid size : 6
+    "MLPClassifier": {
+        "batch_size": [64,256],
+        "max_iter": [20,40,60,100],
+        "loss_function": ["SparseCategoricalCrossEntropy"],
+        "hidden_layer": [(256,128,16,),(1024,512,128,16,),(512,64,32,)],
+        "activation": ['tanh','relu','sigmoid'],
+        "alpha": [0.05,0.1,0.01],
+        "solver": ['adam', 'sgd'],
+        "learning_rate": ['constant','adaptative'],
+        #"dropout_layer": [0,0.2,0.4],
+        "random_state": [42],
     },
 }
 
@@ -118,7 +137,7 @@ def train(fps: int = 10):
             data_augment.grid_augment(original_data_path, augment_grid)
 
         # compute features
-        for tracker_grid in get_tracker_grid():
+        for tracker_grid in tqdm(get_tracker_grid()):
             print("compute features with: ", tracker_grid)
             angle_list = get_angle_list(tracker_grid["number_of_angles"])
             window_size = tracker_grid["window_size"]
@@ -140,7 +159,7 @@ def train(fps: int = 10):
                 save_file["y_pred_test"] = classifier.predict(X_test).tolist()
                 save_file["y_true_test"] = Y_test
 
-                filename = Path(f"data/models/evaluation/{count}.json")
+                filename = Path(f"./data/models/evaluation/{count}.json")
                 json.dump(save_file, filename.open(mode="w"))
 
                 count += 1
@@ -237,8 +256,8 @@ def feature_from_video(formatted_json: Dict,
                 else:
                     label = "neutral"
 
-            video_features.append(features)
-            video_labels.append(label_to_int(label))
+                video_features.append(features)
+                video_labels.append(label_to_int(label))
 
         # jump to the next action
         if i_label >= labels["classes"][i_label]["end_frame"]:
@@ -326,3 +345,5 @@ def delete_data_augment(video_paths: List[Path], fps: int):
     for video_path in video_paths:
         for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*"):
             augmented_data_path.unlink()
+
+train()
