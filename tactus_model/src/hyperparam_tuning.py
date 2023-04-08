@@ -10,60 +10,28 @@ AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 
 DATA_AUGMENT_GRIDS = {
-    # "BIG_GRID": {
-    #     "noise_amplitude": [0, 3],
-    #     "horizontal_flip": [True, False],
-    #     "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
-    #     "rotation_z": [-10, 0, 10],
-    #     "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
-    #     "scale_x": [0.9, 1.1],
-    #     "scale_y": [0.9, 1.1],
-    # },
-    # "DEFAULT_GRID": {
-    #     "noise_amplitude": [0, 3],
-    #     "horizontal_flip": [True, False],
-    #     "rotation_y": [-30, 0, 30],
-    #     "rotation_z": [-10, 0, 10],
-    #     "rotation_x": [-30, 0, 30],
-    #     "scale_x": [0.8, 1, 1.2],
-    #     "scale_y": [0.8, 1, 1.2],
-    # },
-    # "MED_GRID": {
-    #     "noise_amplitude": [0, 3],
-    #     "horizontal_flip": [True, False],
-    #     "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
-    #     "rotation_z": [-10, 0, 10],
-    #     "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
-    # },
-    # "SMALL_GRID": {
-    #     "noise_amplitude": [0, 2, 4],
-    #     "horizontal_flip": [True, False],
-    #     "rotation_y": [-30, 0, 30],
-    #     "rotation_z": [-10, 0, 10],
-    #     "rotation_x": [-30, 0, 30],
-    # },
     "Flip": {"horizontal_flip": [True, False]},
     "SMALLER_GRID": [  # grid size: 32
-        # {
-        #     "horizontal_flip": [True, False],
-        #     "scale_x": [1, 1.2],
-        #     "scale_y": [0.8, 1],
-        # },
+        {
+            "horizontal_flip": [True, False],
+            "scale_x": [1, 1.2],
+            "scale_y": [0.8, 1],
+        },
         {
             "horizontal_flip": [True, False],
             "scale_x": [0.8],
             "scale_y": [1.2, 1],
         },
-        # {
-        #     "horizontal_flip": [True, False],
-        #     "scale_x": [1],
-        #     "scale_y": [1.2],
-        # },
-        # {
-        #     "horizontal_flip": [True, False],
-        #     "rotation_y": np.linspace(-30, 30, 3),
-        #     "rotation_x": np.linspace(-20, 20, 3),
-        # },
+        {
+            "horizontal_flip": [True, False],
+            "scale_x": [1],
+            "scale_y": [1.2],
+        },
+        {
+            "horizontal_flip": [True, False],
+            "rotation_y": np.linspace(-30, 30, 3),
+            "rotation_x": np.linspace(-20, 20, 3),
+        },
     ]
 }
 
@@ -75,14 +43,6 @@ TRACKER_GRID = {  # grid size: 12
 
 
 CLASSIFIER_HYPERPARAMS = {
-    # "lstm": {  # grid size: 72
-    #     "batch_size": [64, 256],
-    #     "epochs": [100],
-    #     "neurons": [50, 100, 250, 500],
-    #     "activation": ["tanh", "relu", "sigmoid"],
-    #     "features_size": ["computed later"],
-    #     "dropout_layer": [0, 0.2, 0.4],
-    # },
     "SVC": {
         "C": [0.5, 1, 2],
         "degree": [3, 5, 7],
