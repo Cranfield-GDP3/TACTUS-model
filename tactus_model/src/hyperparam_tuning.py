@@ -12,7 +12,7 @@ AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 
 DATA_AUGMENT_GRIDS = {
-    "FLIP": {"horizontal_flip": [True, False]},
+    "FLIP": {"horizontal_flip": [True]},
     "SMALL_GRID": {
         "noise_amplitude": [0, 2, 4],
         "horizontal_flip": [True, False],
@@ -240,7 +240,7 @@ def feature_from_video(formatted_json: Dict,
     offender_id = labels["offender"][0]
 
     i_label = 0
-    i_frame = max(labels["classes"][i_label]["start_frame"] - window_size, 0)
+    i_frame = max(labels["classes"][i_label]["start_frame"] - window_size, 0) // 3
     while i_frame < len(formatted_json["frames"]):
         frame = formatted_json["frames"][i_frame]
 
