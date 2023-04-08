@@ -1,5 +1,6 @@
 from typing import List, Dict, Tuple, Generator
 import json
+import numpy as np
 from pathlib import Path
 from tactus_data import skeletonization, data_augment
 from tactus_data.datasets.ut_interaction import data_split
@@ -45,7 +46,8 @@ TRACKER_GRID = {  # grid size: 12
 CLASSIFIER_HYPERPARAMS = {
     "SVC": {
         "C": [0.5, 1, 2],
-        "degree": [3, 5, 7],
+        "kernel": ['rbf'],
+        "gamma": ['scale','auto'],
     },
 }
 
