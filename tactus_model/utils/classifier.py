@@ -89,6 +89,28 @@ class Classifier:
         self.pca = PCA(n_components=n_components, whiten=True)
         return self.pca.fit(X)
 
+    def transform(self, X: Union[np.ndarray, List[List]]):
+        """
+        Apply dimensionality reduction to X.
+
+        X is projected on the first principal components previously extracted
+        from a training set.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            New data, where `n_samples` is the number of samples
+            and `n_features` is the number of features.
+
+        Returns
+        -------
+        X_new : array-like of shape (n_samples, n_components)
+            Projection of X in the first principal components, where
+            `n_samples` is the number of samples and `n_components` is
+            the number of the components.
+        """
+        return self.pca.transform(X)
+
     def fit(self, X, Y):
         """
         fit the classifier to the data.
