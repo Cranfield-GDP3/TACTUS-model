@@ -240,7 +240,9 @@ def feature_from_video(formatted_json: Dict,
     offender_id = labels["offender"][0]
 
     i_label = 0
-    i_frame = max(labels["classes"][i_label]["start_frame"] - window_size, 0) // 3
+    i_frame = get_i_frame(max(labels["classes"][i_label]["start_frame"] - window_size, 0),
+                          formatted_json["frames"])
+
     while i_frame < len(formatted_json["frames"]):
         frame = formatted_json["frames"][i_frame]
 
@@ -347,5 +349,16 @@ def delete_data_augment(video_paths: List[Path], fps: int):
     for video_path in video_paths:
         for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*"):
             augmented_data_path.unlink()
+
+def get_i_frame(starting_frame: int,
+                frames: Dict):
+    current_frame = -100000
+    counter = 0
+
+    while current_frame < starting_frame:
+        current_frame = int(frames[counter]["frame_id"][:-4])
+        counter+=1
+    return counter
+
 
 train()
