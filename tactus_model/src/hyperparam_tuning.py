@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Generator
 import json
 from pathlib import Path
 from tactus_data import skeletonization, data_augment
@@ -50,18 +50,45 @@ CLASSIFIER_HYPERPARAMS = {
 }
 
 
-def get_classifier():
+def get_classifier() -> Generator[Tuple[Classifier, str, dict], None, None]:
+    """
+    get a classifier instance with a set of hyperparametres found in
+    the grid CLASSIFIER_HYPERPARAMS.
+
+    Yields
+    ------
+    Generator[Tuple[Classifier, str, dict], None, None]
+        a tuple with
+        - the classifier initialised with the hyperparametres
+        - the classifier name
+        - the hyperparamtres used on the classifier
+    """
     for classifier_name, hyperparams_grid in CLASSIFIER_HYPERPARAMS.items():
         for hyperparams in data_augment.ParameterGrid(hyperparams_grid):
             yield Classifier(classifier_name, hyperparams), classifier_name, hyperparams
 
 
-def get_augment_grid():
+def get_augment_grid() -> Generator[dict, None, None]:
+    """
+    get a data augmentation grid from DATA_AUGMENT_GRIDS.
+
+    Yields
+    ------
+    Generator[dict, None, None]
+    """
     for _, augment_grid in DATA_AUGMENT_GRIDS.items():
         yield augment_grid
 
 
-def get_tracker_grid():
+def get_tracker_grid() -> Generator[dict, None, None]:
+    """
+    get a tracker grid (with window size and number of angle) from
+    TRACKER_GRID.
+
+    Yields
+    ------
+    Generator[dict, None, None]
+    """
     for grid in data_augment.ParameterGrid(TRACKER_GRID):
         yield grid
 
