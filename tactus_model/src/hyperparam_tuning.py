@@ -294,7 +294,7 @@ def compute_label(frame_id: str, classes: List[Dict], i_label: int) -> str:
     str
         the corresponding label.
     """
-    frame_id = int(frame_id.removesuffix(".jpg"))
+    frame_id = int(frame_id[:-4]) #removesuffix not in 3.8
 
     if classes[i_label]["start_frame"] < frame_id < classes[i_label]["end_frame"]:
         return classes[i_label]["classification"]

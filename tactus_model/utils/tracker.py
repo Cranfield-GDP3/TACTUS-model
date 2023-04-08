@@ -11,7 +11,7 @@ as a key e.g.
     12: SkeletonRollingWindow(...),
 }
 """
-from typing import Generator
+from typing import Generator, Tuple, List
 import numpy as np
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from deep_sort_realtime.deep_sort.track import Track
@@ -27,7 +27,7 @@ class FeatureTracker:
     def __init__(self,
                  deepsort_tracker: DeepSort = None,
                  window_size: int = 5,
-                 angles_to_compute: list[tuple[int, int, int]] = None
+                 angles_to_compute: List[Tuple[int, int, int]] = None
                  ):
         self.window_size = window_size
         self.angles_to_compute = angles_to_compute
@@ -67,7 +67,7 @@ class FeatureTracker:
         """delete a SkeletonRollingWindow from its ID"""
         del self.rolling_windows[track_id]
 
-    def extract(self) -> Generator[tuple[int, np.ndarray], None, None]:
+    def extract(self) -> Generator[Tuple[int, np.ndarray], None, None]:
         """
         Extract features from each SkeletonRollingWindow
 
