@@ -9,8 +9,6 @@ from tactus_model.utils.classifier import Classifier
 
 AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
-
-
 DATA_AUGMENT_GRIDS = {
     "FLIP": {"horizontal_flip": [True]},
     "SMALL_GRID": {
@@ -48,24 +46,22 @@ DATA_AUGMENT_GRIDS = {
 
 }
 
-
 TRACKER_GRID = {  # grid size: 6
     "window_size": [3, 5, 9],  # impact velocity
     "number_of_angles": [0, 8],
 }
 
-
-CLASSIFIER_HYPERPARAMS = { #grid size : 24
+CLASSIFIER_HYPERPARAMS = {  # grid size : 24
     "MLPClassifier": {
         "batch_size": [256],
         "max_iter": [300],
-        #"loss_function": ["SparseCategoricalCrossEntropy"],
-        "hidden_layer_sizes": [(256,128,16,),(1024,512,128,16,),(512,64,32,)],
-        "activation": ['tanh','relu'],
-        "alpha": [0.05,0.1,1],
+        # "loss_function": ["SparseCategoricalCrossEntropy"],
+        "hidden_layer_sizes": [(256, 128, 16,), (1024, 512, 128, 16,), (512, 64, 32,)],
+        "activation": ['tanh', 'relu'],
+        "alpha": [0.05, 0.1, 1],
         "solver": ['adam'],
         "learning_rate": ['adaptive'],
-        #"dropout_layer": [0,0.2,0.4],
+        # "dropout_layer": [0,0.2,0.4],
         "random_state": [42],
     },
 }
@@ -162,7 +158,6 @@ def train(fps: int = 10):
                 filename = Path(f"data/models/evaluation/{count}.json")
                 json.dump(save_file, filename.open(mode="w"))
 
-
                 classifier.save(Path(f"data/models/pickle/{count}.json"))
 
                 count += 1
@@ -240,8 +235,7 @@ def feature_from_video(formatted_json: Dict,
     offender_id = labels["offender"][0]
 
     i_label = 0
-    i_frame = get_i_frame(max(labels["classes"][i_label]["start_frame"] - window_size, 0),
-                          formatted_json["frames"])
+    i_frame = get_i_frame(max(labels["classes"][i_label]["start_frame"] - window_size, 0), formatted_json["frames"])
 
     while i_frame < len(formatted_json["frames"]):
         frame = formatted_json["frames"][i_frame]
@@ -296,7 +290,7 @@ def compute_label(frame_id: str, classes: List[Dict], i_label: int) -> str:
     str
         the corresponding label.
     """
-    frame_id = int(frame_id[:-4]) #removesuffix not in 3.8
+    frame_id = int(frame_id[:-4])  # removesuffix not in 3.8
 
     if classes[i_label]["start_frame"] < frame_id < classes[i_label]["end_frame"]:
         return classes[i_label]["classification"]
@@ -350,15 +344,24 @@ def delete_data_augment(video_paths: List[Path], fps: int):
         for augmented_data_path in video_path.glob(f"{fps}fps/*_augment_*"):
             augmented_data_path.unlink()
 
+
 def get_i_frame(starting_frame: int,
                 frames: Dict):
+    """
+    get frame number index in dict of frame
+
+    Parameters
+    ----------
+    starting_frame: int
+        number of the starting frame.
+    frames: Dict
+        dict containing frame info.
+
+    """
     current_frame = -100000
     counter = 0
 
     while current_frame < starting_frame:
         current_frame = int(frames[counter]["frame_id"][:-4])
-        counter+=1
+        counter += 1
     return counter
-
-
-train()
