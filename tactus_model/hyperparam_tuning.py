@@ -1,6 +1,5 @@
 from typing import List, Dict, Tuple, Generator
 import json
-import numpy as np
 from pathlib import Path
 from tactus_data import skeletonization, data_augment
 from tactus_data.datasets.ut_interaction import data_split
@@ -43,7 +42,6 @@ DATA_AUGMENT_GRIDS = {
         "scale_x": [0.9, 1.1],
         "scale_y": [0.9, 1.1],
     },
-
 }
 
 TRACKER_GRID = {  # grid size: 6
@@ -82,7 +80,7 @@ def get_classifier() -> Generator[Tuple[Classifier, str, dict], None, None]:
     """
     for classifier_name, hyperparams_grid in CLASSIFIER_HYPERPARAMS.items():
         for hyperparams in data_augment.ParameterGrid(hyperparams_grid):
-            yield Classifier(classifier_name, hyperparams), classifier_name, hyperparams
+            yield Classifier(classifier_name, hyperparams)
 
 
 def get_augment_grid() -> Generator[dict, None, None]:
@@ -110,7 +108,7 @@ def get_tracker_grid() -> Generator[dict, None, None]:
         yield grid
 
 
-def train(fps: int = 10):
+def train_grid_search(fps: int = 10):
     """
     launch the training process
 
@@ -122,7 +120,7 @@ def train(fps: int = 10):
     # cant use a generator here because we use this multiple times
     train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
 
-    count = 0
+    model_id = 0
     for augment_grid in get_augment_grid():
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
@@ -141,26 +139,39 @@ def train(fps: int = 10):
             X, Y = generate_features(train_videos, fps, window_size, angle_list)
             X_test, Y_test = generate_features(test_videos, fps, window_size, angle_list)
 
-            save_file = {}
-            save_file["augment_grid"] = augment_grid
-            save_file["tracker_grid"] = tracker_grid
-            for classifier, classifier_name, hyperparams in get_classifier():
-                print("fit classifier: ", classifier_name, " - ", hyperparams)
-                loss_history = classifier.fit(X, Y).loss_curve_
+            for classifier in get_classifier():
+                print("fit classifier: ", classifier.classifier_name, " - ", classifier.hyperparams)
+                classifier.fit(X, Y)
+                classifier.save(Path(f"data/models/pickle/{model_id}.pickle "))
 
-                save_file["classifier_name"] = classifier_name
-                save_file["hyperparams"] = hyperparams
-                save_file["y_pred_train"] = classifier.predict(X).tolist()
-                save_file["y_true_train"] = Y
-                save_file["y_pred_test"] = classifier.predict(X_test).tolist()
-                save_file["y_true_test"] = Y_test
-                save_file["loss_history"] = loss_history
-                filename = Path(f"data/models/evaluation/{count}.json")
-                json.dump(save_file, filename.open(mode="w"))
+                save_model_evaluation(model_id, classifier, augment_grid,
+                                      tracker_grid, X, Y, X_test, Y_test)
 
-                classifier.save(Path(f"data/models/pickle/{count}.json"))
+                model_id += 1
 
-                count += 1
+
+def save_model_evaluation(model_id, classifier, augment_grid, tracker_grid, X, Y, X_test, Y_test):
+    """
+    predict the train and the test dataset to measure the performance
+    of the model later on.
+    """
+    eval_dict = {}
+
+    eval_dict["augment_grid"] = augment_grid
+    eval_dict["tracker_grid"] = tracker_grid
+
+    eval_dict["classifier_name"] = classifier.classifier_name
+    eval_dict["hyperparams"] = classifier.hyperparams
+    eval_dict["loss_history"] = classifier.loss_curve_
+
+    eval_dict["y_pred_train"] = classifier.predict(X).tolist()
+    eval_dict["y_true_train"] = Y
+
+    eval_dict["y_pred_test"] = classifier.predict(X_test).tolist()
+    eval_dict["y_true_test"] = Y_test
+
+    filename = Path(f"data/models/evaluation/{model_id}.json")
+    json.dump(eval_dict, filename.open(mode="w", encoding="utf8"))
 
 
 def generate_features(videos: List[Path], fps: int, window_size: int, angle_list: List):
@@ -168,7 +179,7 @@ def generate_features(videos: List[Path], fps: int, window_size: int, angle_list
     generates features for a list of video directories. The directories
     must follow the following structure:
     `video_name -> label.json`
-    `video_name -> xxfps -> data.json`
+    `video_name -> xxfps -> *_augment_*.json`
 
     Parameters
     ----------
