@@ -52,6 +52,15 @@ class TorchMLP:
             loss.backward()
             self. optimizer.step()
 
+    def predict(self, X):
+        """
+        predict using the fitted model
+        """
+        if isinstance(X, List):
+            X = torch.Tensor(X)
+
+        return self.model(X)
+
     def _build(self, input_size: int, output_size: int):
         """
         automatically build the model in regard of the input and the
