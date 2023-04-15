@@ -69,8 +69,15 @@ class FeatureTracker:
         self.rolling_windows[track_id].add_skeleton(skeleton, has_head, has_confidence)
 
     def delete_track_id(self, track_id: int):
-        """delete a SkeletonRollingWindow from its ID"""
-        del self.rolling_windows[track_id]
+        """
+        delete a SkeletonRollingWindow from its ID.
+
+        DeepSort can have unconfirmed track that are not taken into
+        account in FeatureTracker. To avoid an error, we delete
+        the index only if it exists.
+        """
+        if track_id in self.rolling_windows:
+            del self.rolling_windows[track_id]
 
     def extract(self) -> Generator[Tuple[int, np.ndarray], None, None]:
         """
