@@ -116,3 +116,6 @@ class PredTracker:
 
     def __delattr__(self, __index: int):
         del self.tracker[__index]
+
+    def __contains__(self, __index: int):
+        return __index in self.tracker
