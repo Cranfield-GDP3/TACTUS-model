@@ -1,6 +1,8 @@
 from typing import Tuple, List
+from tqdm import tqdm
 import torch
-import torch.nn as nn
+from torch import nn
+from torch.utils.data import DataLoader, TensorDataset
 from sklearn.utils.multiclass import unique_labels
 from sklearn.utils.validation import _num_features
 
@@ -11,7 +13,8 @@ class TorchMLP:
         hidden_layer_sizes: Tuple[int],
         activation: str,
         *,
-        dropout_layers: Tuple[int] = None
+        dropout_layers: Tuple[int] = None,
+        device: str = None,
     ):
         if dropout_layers is None:
             dropout_layers = [0] * len(hidden_layer_sizes)
@@ -27,7 +30,9 @@ class TorchMLP:
         self.loss_fn = None
         self.optimizer = None
 
-    def fit(self, X, Y, *, num_epochs: int):
+        self.select_device(device)
+
+    def fit(self, X, Y, *, num_epochs: int, batch_size: int = 1):
         """
         fit the model
 
@@ -38,26 +43,31 @@ class TorchMLP:
         """
         input_size = _num_features(X)
         output_size = len(unique_labels(Y))
+
         self._build(input_size, output_size)
 
         if isinstance(X, List):
-            X = torch.Tensor(X)
+            X = torch.tensor(X, dtype=torch.float32, device=self.device)
         if isinstance(Y, List):
-            Y = torch.LongTensor(Y)
+            Y = torch.tensor(Y, dtype=torch.long, device=self.device)
 
-        for _ in range(num_epochs):
-            y_pred = self.model(X)
-            loss = self.loss_fn(y_pred, Y)
-            self.optimizer.zero_grad()
-            loss.backward()
-            self. optimizer.step()
+        dataset = TensorDataset(X, Y)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+        for _ in tqdm(range(num_epochs)):
+            for _, (x_batch, y_batch) in enumerate(dataloader):
+                y_pred = self.model(x_batch)
+                loss = self.loss_fn(y_pred, y_batch)
+                self.optimizer.zero_grad()
+                loss.backward()
+                self. optimizer.step()
 
     def predict(self, X):
         """
         predict using the fitted model
         """
         if isinstance(X, List):
-            X = torch.Tensor(X)
+            X = torch.tensor(X, dtype=torch.float32, device=self.device)
 
         return self.model(X)
 
@@ -85,8 +95,26 @@ class TorchMLP:
                 layers.append(activation_layer())
                 layers.append(nn.Dropout(self.dropout_layers[i]))
 
-        layers.append(nn.Softmax())
-        self.model = nn.Sequential(*layers)
+        layers.append(nn.Softmax(dim=1))
+        self.model = nn.Sequential(*layers).to(device=self.device)
 
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.Adam(self.model.parameters())
+
+    def select_device(self, device: str = None):
+        """
+        select the device or default to CPU if not found.
+
+        Parameters
+        ----------
+        device : str, optional
+            name of the device to use, by default None
+        """
+        if device is None:
+            device = "cuda:0"
+
+        device = device.lower()
+        if not torch.cuda.is_available():
+            device = "cpu"
+
+        self.device = torch.device(device)
