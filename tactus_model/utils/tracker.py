@@ -109,4 +109,10 @@ class PredTracker:
             track_ids = [track_ids]
 
         for track_id in track_ids:
-            del self.tracker[track_id]
+            del self[track_id]
+
+    def __getattr__(self, __index: int) -> Dict[int, Dict]:
+        return self.tracker[__index]
+
+    def __delattr__(self, __index: int):
+        del self.tracker[__index]
