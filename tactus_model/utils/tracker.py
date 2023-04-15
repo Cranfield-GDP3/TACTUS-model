@@ -11,7 +11,10 @@ as a key e.g.
     12: SkeletonRollingWindow(...),
 }
 """
-from typing import Generator, Tuple, List
+from typing import Union, Generator, Tuple, List, Dict
+from collections import Sequence
+import copy
+import time
 import numpy as np
 from deep_sort_realtime.deepsort_tracker import DeepSort
 from deep_sort_realtime.deep_sort.track import Track
@@ -39,6 +42,7 @@ class FeatureTracker:
             self.deepsort = DeepSort(n_init=3, max_age=5)
         else:
             self.deepsort = deepsort_tracker
+        self.tracks_to_del = []
 
     def reset_rolling_windows(self):
         self.rolling_windows = {}
@@ -48,12 +52,13 @@ class FeatureTracker:
         window"""
         tracks: list[Track]
         tracks = retracker.deepsort_track_frame(self.deepsort, frame, skeletons, new_version=True)
+        self.tracks_to_del = copy.deepcopy(self.deepsort.tracker.del_tracks_ids)
 
         for i, track in enumerate(tracks):
             if track.is_confirmed():
                 self.update_rolling_window(track.track_id, skeletons[i])
 
-        for track_id in self.deepsort.tracker.del_tracks_ids:
+        for track_id in self.tracks_to_del:
             self.delete_track_id(track_id)
 
     def update_rolling_window(self, track_id: int, skeleton: dict, has_head: bool = True, has_confidence: bool = True):
@@ -78,3 +83,30 @@ class FeatureTracker:
         """
         for track_id, rolling_window in self.rolling_windows.items():
             yield track_id, rolling_window.get_features()
+
+
+class PredTracker:
+    """
+    save the non-neutral predictions for each skeleton still present
+    on the stream.
+    """
+    def __init__(self):
+        self.tracker: Dict[int, Dict]
+
+    def add_pred(self, track_id: int, label: str, bbx: Tuple[int, int, int, int]):
+        """starts the tracking of a person from a prediction label"""
+        pred_tracker_info = {
+            "label": label,
+            "timestamp": time.time(),
+            "original_bbx": bbx
+        }
+
+        self.tracker[track_id] = pred_tracker_info
+
+    def remove_pred_track(self, track_ids: Union[List[int], int]):
+        """removes the track of a person"""
+        if not isinstance(track_ids, Sequence):
+            track_ids = [track_ids]
+
+        for track_id in track_ids:
+            del self.tracker[track_id]
