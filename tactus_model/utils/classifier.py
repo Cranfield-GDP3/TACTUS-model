@@ -3,15 +3,15 @@ from pathlib import Path
 import pickle
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.decomposition import PCA
+from .torch_mlp import TorchMLP
 
 
 AVAILABLE_MODELS = {
     "LSTM": "LSTM",
     "SVC": SVC,
-    "MLPClassifier": MLPClassifier,
+    "TorchMLP": TorchMLP,
     "GradientBoostingClassifier": GradientBoostingClassifier,
 }
 

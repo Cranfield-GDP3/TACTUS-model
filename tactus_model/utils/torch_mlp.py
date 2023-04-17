@@ -14,6 +14,8 @@ class TorchMLP:
         activation: str,
         *,
         dropout_layers: Tuple[int] = None,
+        num_epochs: Tuple[int] = None,
+        batch_size: Tuple[int] = None,
         device: str = None,
     ):
         if dropout_layers is None:
@@ -22,9 +24,11 @@ class TorchMLP:
             raise IndexError('dropout_layers must be the same size as hidden_layer_sizes')
 
         self.hidden_layer_sizes = hidden_layer_sizes
+        self.activation = activation
         self.dropout_layers = dropout_layers
 
-        self.activation = activation
+        self.num_epochs = num_epochs
+        self.batch_size = batch_size
 
         self.model = None
         self.loss_fn = None
@@ -32,7 +36,7 @@ class TorchMLP:
 
         self.select_device(device)
 
-    def fit(self, X, Y, *, num_epochs: int, batch_size: int = 1):
+    def fit(self, X, Y, *, num_epochs: int = None, batch_size: int = None):
         """
         fit the model
 
@@ -41,6 +45,15 @@ class TorchMLP:
         num_epochs : int
             number of epochs
         """
+        num_epochs = num_epochs or self.num_epochs
+        batch_size = batch_size or self.batch_size
+        if num_epochs is None:
+            raise ValueError("num_epochs should be either defined as an instance attribute "
+                             "or in the the fit function")
+        if batch_size is None:
+            raise ValueError("batch_size should be either defined as an instance attribute "
+                             "or in the the fit function")
+
         input_size = _num_features(X)
         output_size = len(unique_labels(Y))
 
