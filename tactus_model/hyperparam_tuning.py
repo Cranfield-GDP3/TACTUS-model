@@ -10,52 +10,21 @@ AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 DATA_AUGMENT_GRIDS = {
     "FLIP": {"horizontal_flip": [True, False]},
-    "SMALL_GRID": {
-        "noise_amplitude": [0, 2, 4],
-        "horizontal_flip": [True, False],
-        "rotation_y": [-30, 0, 30],
-        "rotation_z": [-10, 0, 10],
-        "rotation_x": [-30, 0, 30],
-    },
-    "DEFAULT_GRID": {
-        "noise_amplitude": [0, 3],
-        "horizontal_flip": [True, False],
-        "rotation_y": [-30, 0, 30],
-        "rotation_z": [-10, 0, 10],
-        "rotation_x": [-30, 0, 30],
-        "scale_x": [0.8, 1, 1.2],
-        "scale_y": [0.8, 1, 1.2],
-    },
-    "MED_GRID": {
-        "noise_amplitude": [0, 3],
-        "horizontal_flip": [True, False],
-        "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
-        "rotation_z": [-10, 0, 10],
-        "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
-    },
-    "BIG_GRID": {
-        "noise_amplitude": [0, 3],
-        "horizontal_flip": [True, False],
-        "rotation_y": [-30, -20, -10, 0, 10, 20, 30],
-        "rotation_z": [-10, 0, 10],
-        "rotation_x": [-30, -20, -10, 0, 10, 20, 30],
-        "scale_x": [0.9, 1.1],
-        "scale_y": [0.9, 1.1],
-    },
+
 }
 
 TRACKER_GRID = {  # grid size: 6
-    "window_size": [3, 5, 9],  # impact velocity
-    "number_of_angles": [0, 8],
+    "window_size": [9], #[3, 5, 9],  # impact velocity
+    "number_of_angles": [0] # 8],
 }
 
 CLASSIFIER_HYPERPARAMS = {  # grid size : 18
     "TorchMLP": {
         "batch_size": [256],
         "num_epochs": [300],
-        "hidden_layer_sizes": [(256, 128, 16,), (1024, 512, 128, 16,), (512, 64, 32,)],
-        "activation": ['Tanh', 'ReLU'],
-        "dropout_layers_sizes": [(0, 0.2, 0.4)],
+        "hidden_layer_sizes": [{"layer_sizes": [256, 128, 16], "dropout": [0.4, 0.2, 0.1]},
+                                {"layer_sizes": [1024, 512, 128, 16], "dropout": [0.5, 0.3, 0.2, 0.1]}],
+        "activation": ['Tanh', 'ReLU']
     },
 }
 
@@ -157,6 +126,9 @@ def train_grid_search(
             for classifier in get_classifier(classifier_grids):
                 print("fit classifier: ", classifier.name, " with ", classifier.hyperparams)
                 classifier.fit(X, Y)
+                classifier.window_size = window_size
+                classifier.fps = fps
+                classifier.angle_to_compute = angle_list
                 classifier.save(Path(f"data/models/pickle/{model_id}.pickle"))
 
                 save_model_evaluation(model_id, classifier, augment_grid,

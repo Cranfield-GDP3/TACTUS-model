@@ -34,10 +34,15 @@ class Classifier:
         self.clf = None
         self.name = None
         self.hyperparams = None
+        self.window_size = None
+        self.angle_to_compute = None
+        self.fps = None
 
         if classifier_name is not None and hyperparams is not None:
             self.name = classifier_name
             self.hyperparams = hyperparams
+            self.hyperparams["dropout_layers_sizes"] = self.hyperparams["hidden_layer_sizes"]["dropout"]
+            self.hyperparams["hidden_layer_sizes"] = self.hyperparams["hidden_layer_sizes"]["layer_sizes"]
             self.clf = AVAILABLE_MODELS[classifier_name](**hyperparams)
         self.pca = None
 
