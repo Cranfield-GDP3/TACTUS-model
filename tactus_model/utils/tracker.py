@@ -97,18 +97,22 @@ class PredTracker:
     save the non-neutral predictions for each skeleton still present
     on the stream.
     """
+
     def __init__(self):
-        self.tracker: Dict[int, Dict]
+        self.tracker: Dict[int, Dict] = {}
+
+    def init_track_id(self, track_id: int):
+        """initialize the dictionary key"""
+        self.tracker[track_id] = {"current_label": None,
+                                  "label_history": []}
 
     def add_pred(self, track_id: int, label: str, bbx: Tuple[int, int, int, int]):
         """starts the tracking of a person from a prediction label"""
-        pred_tracker_info = {
-            "label": label,
-            "timestamp": time.time(),
-            "original_bbx": bbx
-        }
-
-        self.tracker[track_id] = pred_tracker_info
+        self.tracker[track_id]["current_label"] = label
+        self.tracker[track_id]["timestamp"] = time.time()
+        self.tracker[track_id]["box"] = bbx
+        if label not in self.tracker[track_id]["label_history"]:
+            self.tracker[track_id]["label_history"].append(label)
 
     def remove_pred_track(self, track_ids: Union[List[int], int]):
         """removes the track of a person"""
@@ -118,11 +122,8 @@ class PredTracker:
         for track_id in track_ids:
             del self[track_id]
 
-    def __getattr__(self, __index: int) -> Dict[int, Dict]:
-        return self.tracker[__index]
-
-    def __delattr__(self, __index: int):
-        del self.tracker[__index]
-
     def __contains__(self, __index: int):
         return __index in self.tracker
+
+    def __getitem__(self, key_name: str):
+        return self.tracker[key_name]
