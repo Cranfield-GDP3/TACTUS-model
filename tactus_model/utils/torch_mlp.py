@@ -84,7 +84,7 @@ class TorchMLP:
         if isinstance(X, List):
             X = torch.tensor(X, dtype=torch.float32, device=self.device)
 
-        return self.model(X)
+        return torch.argmax(self.model(X), dim=1)
 
     def _build(self, input_size: int, output_size: int):
         """

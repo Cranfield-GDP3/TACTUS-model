@@ -157,7 +157,7 @@ def train_grid_search(
             for classifier in get_classifier(classifier_grids):
                 print("fit classifier: ", classifier.name, " with ", classifier.hyperparams)
                 classifier.fit(X, Y)
-                classifier.save(Path(f"data/models/pickle/{model_id}.pickle "))
+                classifier.save(Path(f"data/models/pickle/{model_id}.pickle"))
 
                 save_model_evaluation(model_id, classifier, augment_grid,
                                       tracker_params, X, Y, X_test, Y_test)
@@ -185,6 +185,7 @@ def save_model_evaluation(model_id, classifier, augment_grid, tracker_params, X,
     eval_dict["y_true_test"] = Y_test
 
     filename = Path(f"data/models/evaluation/{model_id}.json")
+    filename.parent.mkdir(parents=True, exist_ok=True)
     json.dump(eval_dict, filename.open(mode="w", encoding="utf8"))
 
 
