@@ -62,7 +62,7 @@ CLASSIFIER_HYPERPARAMS = {  # grid size : 18
 
 def get_classifier(
         classifier_grids: Dict[str, Dict] = None,
-    ) -> Generator[Tuple[Classifier, str, dict], None, None]:
+) -> Generator[Tuple[Classifier, str, dict], None, None]:
     """
     get a classifier instance with a set of hyperparametres found in
     the grid.
@@ -85,7 +85,7 @@ def get_classifier(
 
 def get_augment_grid(
         augment_grids: Dict[str, Dict] = None,
-    ) -> Generator[dict, None, None]:
+) -> Generator[dict, None, None]:
     """
     get a data augmentation grid from augment_grids.
 
@@ -102,7 +102,7 @@ def get_augment_grid(
 
 def get_tracker_params(
         tracker_grid: Dict[str, List] = None,
-    ) -> Generator[dict, None, None]:
+) -> Generator[dict, None, None]:
     """
     get a tracker parametres (with window size and number of angle) from
     the grid.
@@ -123,7 +123,7 @@ def train_grid_search(
         augment_grids: Dict[str, Dict] = None,
         tracker_grid: Dict[str, List] = None,
         classifier_grids: Dict[str, Dict] = None,
-    ):
+):
     """
     launch the training process
 
@@ -229,10 +229,12 @@ def generate_features(videos: List[Path], fps: int, window_size: int, angle_list
     return X, Y
 
 
-def feature_from_video(formatted_json: Dict,
-                       labels: Dict,
-                       window_size: int,
-                       angle_list: List):
+def feature_from_video(
+    formatted_json: Dict,
+    labels: Dict,
+    window_size: int,
+    angle_list: List
+):
     """
     Compute features and true labels from a `json video` file.
 
