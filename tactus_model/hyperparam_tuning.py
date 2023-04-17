@@ -49,6 +49,8 @@ def get_classifier(
 
     for classifier_name, hyperparams_grid in classifier_grids.items():
         for hyperparams in data_augment.ParameterGrid(hyperparams_grid):
+            hyperparams["dropout_layers_sizes"] = hyperparams["hidden_layer_sizes"]["dropout"]
+            hyperparams["hidden_layer_sizes"] = hyperparams["hidden_layer_sizes"]["layer_sizes"]
             yield Classifier(classifier_name, hyperparams)
 
 
@@ -102,7 +104,7 @@ def train_grid_search(
         the fps to train on, by default 10
     """
     # cant use a generator here because we use this multiple times
-    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (15, 70, 15))
+    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (5, 90, 5))
 
     model_id = 0
     for augment_grid in get_augment_grid(augment_grids):
