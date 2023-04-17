@@ -17,14 +17,14 @@ AVAILABLE_MODELS = {
 
 
 class Classifier:
-    def __init__(self, classifier: str = None, hyperparams: dict = None) -> None:
+    def __init__(self, classifier_name: str = None, hyperparams: dict = None) -> None:
         """
         Create the classifier instance with the given name and
         hyperparametres.
 
         Parameters
         ----------
-        classifier : str, optional
+        classifier_name : str, optional
             name of the classifier. Must be in "SVC", "MLPClassifier",
             "GradientBoostingClassifier", by default None.
         hyperparams : dict, optional
@@ -32,11 +32,17 @@ class Classifier:
             by default None.
         """
         self.clf = None
-        if classifier is not None and hyperparams is not None:
-            self.clf = AVAILABLE_MODELS[classifier](**hyperparams)
+        self.name = None
+        self.hyperparams = None
+
+        if classifier_name is not None and hyperparams is not None:
+            self.name = classifier_name
+            self.hyperparams = hyperparams
+            self.clf = AVAILABLE_MODELS[classifier_name](**hyperparams)
         self.pca = None
 
-    def load(self, model_weights_path: Path):
+    @classmethod
+    def load(cls, model_weights_path: Path):
         """
         load model weights from a path.
 
@@ -49,10 +55,11 @@ class Classifier:
         -------
         Classifier
             return instance of the classifier to allow chaining like
-            `clf = Classifier().load(model_weights_path)`.
+        Examples
+        --------
+        `clf = Classifier.load(model_weights_path)`.
         """
-        self.clf = pickle.load(model_weights_path.open("rb"))
-        return self
+        return pickle.load(model_weights_path.open("rb"))
 
     def save(self, save_path: Path):
         """

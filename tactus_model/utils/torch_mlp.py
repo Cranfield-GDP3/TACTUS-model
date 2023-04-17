@@ -13,19 +13,19 @@ class TorchMLP:
         hidden_layer_sizes: Tuple[int],
         activation: str,
         *,
-        dropout_layers: Tuple[int] = None,
+        dropout_layers_sizes: Tuple[int] = None,
         num_epochs: Tuple[int] = None,
         batch_size: Tuple[int] = None,
         device: str = None,
     ):
-        if dropout_layers is None:
-            dropout_layers = [0] * len(hidden_layer_sizes)
-        if len(hidden_layer_sizes) != len(dropout_layers):
+        if dropout_layers_sizes is None:
+            dropout_layers_sizes = [0] * len(hidden_layer_sizes)
+        if len(hidden_layer_sizes) != len(dropout_layers_sizes):
             raise IndexError('dropout_layers must be the same size as hidden_layer_sizes')
 
         self.hidden_layer_sizes = hidden_layer_sizes
         self.activation = activation
-        self.dropout_layers = dropout_layers
+        self.dropout_layers_sizes = dropout_layers_sizes
 
         self.num_epochs = num_epochs
         self.batch_size = batch_size
@@ -108,7 +108,7 @@ class TorchMLP:
             if i < len(layer_sizes) - 2:
                 activation_layer = getattr(nn, self.activation)
                 layers.append(activation_layer())
-                layers.append(nn.Dropout(self.dropout_layers[i]))
+                layers.append(nn.Dropout(self.dropout_layers_sizes[i]))
 
         layers.append(nn.Softmax(dim=1))
         self.model = nn.Sequential(*layers).to(device=self.device)

@@ -9,7 +9,7 @@ from tactus_model.utils.classifier import Classifier
 AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
 
 DATA_AUGMENT_GRIDS = {
-    "FLIP": {"horizontal_flip": [True]},
+    "FLIP": {"horizontal_flip": [True, False]},
     "SMALL_GRID": {
         "noise_amplitude": [0, 2, 4],
         "horizontal_flip": [True, False],
@@ -49,26 +49,23 @@ TRACKER_GRID = {  # grid size: 6
     "number_of_angles": [0, 8],
 }
 
-CLASSIFIER_HYPERPARAMS = {  # grid size : 24
-    "MLPClassifier": {
+CLASSIFIER_HYPERPARAMS = {  # grid size : 18
+    "TorchMLP": {
         "batch_size": [256],
-        "max_iter": [300],
-        # "loss_function": ["SparseCategoricalCrossEntropy"],
+        "num_epochs": [300],
         "hidden_layer_sizes": [(256, 128, 16,), (1024, 512, 128, 16,), (512, 64, 32,)],
-        "activation": ['tanh', 'relu'],
-        "alpha": [0.05, 0.1, 1],
-        "solver": ['adam'],
-        "learning_rate": ['adaptive'],
-        # "dropout_layer": [0,0.2,0.4],
-        "random_state": [42],
+        "activation": ['Tanh', 'ReLU'],
+        "dropout_layers_sizes": [(0, 0.2, 0.4)],
     },
 }
 
 
-def get_classifier() -> Generator[Tuple[Classifier, str, dict], None, None]:
+def get_classifier(
+        classifier_grids: Dict[str, Dict] = None,
+    ) -> Generator[Tuple[Classifier, str, dict], None, None]:
     """
     get a classifier instance with a set of hyperparametres found in
-    the grid CLASSIFIER_HYPERPARAMS.
+    the grid.
 
     Yields
     ------
@@ -78,37 +75,55 @@ def get_classifier() -> Generator[Tuple[Classifier, str, dict], None, None]:
         - the classifier name
         - the hyperparamtres used on the classifier
     """
-    for classifier_name, hyperparams_grid in CLASSIFIER_HYPERPARAMS.items():
+    if classifier_grids is None:
+        classifier_grids = CLASSIFIER_HYPERPARAMS
+
+    for classifier_name, hyperparams_grid in classifier_grids.items():
         for hyperparams in data_augment.ParameterGrid(hyperparams_grid):
             yield Classifier(classifier_name, hyperparams)
 
 
-def get_augment_grid() -> Generator[dict, None, None]:
+def get_augment_grid(
+        augment_grids: Dict[str, Dict] = None,
+    ) -> Generator[dict, None, None]:
     """
-    get a data augmentation grid from DATA_AUGMENT_GRIDS.
+    get a data augmentation grid from augment_grids.
 
     Yields
     ------
     Generator[dict, None, None]
     """
-    for _, augment_grid in DATA_AUGMENT_GRIDS.items():
+    if augment_grids is None:
+        augment_grids = DATA_AUGMENT_GRIDS
+
+    for _, augment_grid in augment_grids.items():
         yield augment_grid
 
 
-def get_tracker_grid() -> Generator[dict, None, None]:
+def get_tracker_params(
+        tracker_grid: Dict[str, List] = None,
+    ) -> Generator[dict, None, None]:
     """
-    get a tracker grid (with window size and number of angle) from
-    TRACKER_GRID.
+    get a tracker parametres (with window size and number of angle) from
+    the grid.
 
     Yields
     ------
     Generator[dict, None, None]
     """
-    for grid in data_augment.ParameterGrid(TRACKER_GRID):
+    if tracker_grid is None:
+        tracker_grid = TRACKER_GRID
+
+    for grid in data_augment.ParameterGrid(tracker_grid):
         yield grid
 
 
-def train_grid_search(fps: int = 10):
+def train_grid_search(
+        fps: int = 10,
+        augment_grids: Dict[str, Dict] = None,
+        tracker_grid: Dict[str, List] = None,
+        classifier_grids: Dict[str, Dict] = None,
+    ):
     """
     launch the training process
 
@@ -118,10 +133,10 @@ def train_grid_search(fps: int = 10):
         the fps to train on, by default 10
     """
     # cant use a generator here because we use this multiple times
-    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
+    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (15, 70, 15))
 
     model_id = 0
-    for augment_grid in get_augment_grid():
+    for augment_grid in get_augment_grid(augment_grids):
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
         delete_data_augment(train_videos + test_videos, fps)
@@ -131,26 +146,26 @@ def train_grid_search(fps: int = 10):
             data_augment.grid_augment(original_data_path, augment_grid)
 
         # compute features
-        for tracker_grid in get_tracker_grid():
-            print("compute features with: ", tracker_grid)
-            angle_list = get_angle_list(tracker_grid["number_of_angles"])
-            window_size = tracker_grid["window_size"]
+        for tracker_params in get_tracker_params(tracker_grid):
+            print("compute features with: ", tracker_params)
+            angle_list = get_angle_list(tracker_params["number_of_angles"])
+            window_size = tracker_params["window_size"]
 
             X, Y = generate_features(train_videos, fps, window_size, angle_list)
             X_test, Y_test = generate_features(test_videos, fps, window_size, angle_list)
 
-            for classifier in get_classifier():
-                print("fit classifier: ", classifier.classifier_name, " - ", classifier.hyperparams)
+            for classifier in get_classifier(classifier_grids):
+                print("fit classifier: ", classifier.name, " with ", classifier.hyperparams)
                 classifier.fit(X, Y)
                 classifier.save(Path(f"data/models/pickle/{model_id}.pickle "))
 
                 save_model_evaluation(model_id, classifier, augment_grid,
-                                      tracker_grid, X, Y, X_test, Y_test)
+                                      tracker_params, X, Y, X_test, Y_test)
 
                 model_id += 1
 
 
-def save_model_evaluation(model_id, classifier, augment_grid, tracker_grid, X, Y, X_test, Y_test):
+def save_model_evaluation(model_id, classifier, augment_grid, tracker_params, X, Y, X_test, Y_test):
     """
     predict the train and the test dataset to measure the performance
     of the model later on.
@@ -158,11 +173,10 @@ def save_model_evaluation(model_id, classifier, augment_grid, tracker_grid, X, Y
     eval_dict = {}
 
     eval_dict["augment_grid"] = augment_grid
-    eval_dict["tracker_grid"] = tracker_grid
+    eval_dict["tracker_params"] = tracker_params
 
-    eval_dict["classifier_name"] = classifier.classifier_name
+    eval_dict["classifier_name"] = classifier.name
     eval_dict["hyperparams"] = classifier.hyperparams
-    eval_dict["loss_history"] = classifier.loss_curve_
 
     eval_dict["y_pred_train"] = classifier.predict(X).tolist()
     eval_dict["y_true_train"] = Y
@@ -384,3 +398,7 @@ def frame_id_to_int(frame_id: str) -> int:
     removesuffix is not available in python 3.8
     """
     return int(frame_id[:-4])
+
+
+if __name__ == "__main__":
+    train_grid_search()
