@@ -58,6 +58,7 @@ class TorchMLP:
         output_size = len(unique_labels(Y))
 
         self._build(input_size, output_size)
+        self.model.train()
 
         if isinstance(X, List):
             X = torch.tensor(X, dtype=torch.float32, device=self.device)
@@ -79,6 +80,7 @@ class TorchMLP:
         """
         predict using the fitted model
         """
+        self.model.eval()
         if isinstance(X, List):
             X = torch.tensor(X, dtype=torch.float32, device=self.device)
 
