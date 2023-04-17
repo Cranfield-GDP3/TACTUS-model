@@ -104,7 +104,7 @@ def train_grid_search(
         the fps to train on, by default 10
     """
     # cant use a generator here because we use this multiple times
-    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (5, 90, 5))
+    train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
 
     model_id = 0
     for augment_grid in get_augment_grid(augment_grids):
