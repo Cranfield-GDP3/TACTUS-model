@@ -1,7 +1,7 @@
 from typing import List, Dict, Tuple, Generator
 import json
 from pathlib import Path
-from tactus_data import skeletonization, data_augment
+from tactus_data import data_augment, SMALL_ANGLES_LIST, MEDIUM_ANGLES_LIST
 from tactus_data.datasets.ut_interaction import data_split
 from tactus_model.utils.tracker import FeatureTracker
 from tactus_model.utils.classifier import Classifier
@@ -130,7 +130,7 @@ def train_grid_search(
                 classifier.fit(X, Y)
                 classifier.window_size = window_size
                 classifier.fps = fps
-                classifier.angle_to_compute = angle_list
+                classifier.angles_to_compute = angle_list
                 classifier.save(Path(f"data/models/pickle/{model_id}.pickle"))
 
                 save_model_evaluation(model_id, classifier, augment_grid,
@@ -324,10 +324,10 @@ def get_angle_list(number_of_angles: int) -> List[Tuple[int, int, int]]:
         return []
 
     if number_of_angles == 4:
-        return skeletonization.BK.BASIC_ANGLE_LIST
+        return SMALL_ANGLES_LIST
 
     if number_of_angles == 8:
-        return skeletonization.BK.MEDIUM_ANGLE_LIST
+        return MEDIUM_ANGLES_LIST
 
 
 def delete_data_augment(video_paths: List[Path], fps: int):
