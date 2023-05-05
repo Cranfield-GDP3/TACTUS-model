@@ -21,20 +21,11 @@ def get_version(rel_path: str) -> str:
 long_description = read("README.md")
 
 install_requires = [
-    "simplejson",
-    "pandas",
     "numpy",
     "Pillow",
-    "cython",
     "matplotlib",
-    "scikit-image",
-    "opencv-python",
-    "h5py",
-    "imgaug",
-    "argparse",
     "scikit-learn",
-    "slidingwindow",
-    "pyyaml"
+    "tactus-data @ git+https://github.com/Cranfield-GDP3/tactus-data.git"
 ]
 tests_require = [
     "pytest",
