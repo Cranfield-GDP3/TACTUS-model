@@ -6,7 +6,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.decomposition import PCA
 from .torch_mlp import TorchMLP
-
+from tactus_data import BodyAngles
 
 AVAILABLE_MODELS = {
     "LSTM": "LSTM",
@@ -34,9 +34,10 @@ class Classifier:
         self.clf = None
         self.name = None
         self.hyperparams = None
-        self.window_size = None
-        self.angle_to_compute = None
-        self.fps = None
+
+        self.window_size: int = None
+        self._angles_to_compute: List[BodyAngles] = None
+        self.fps: int = None
 
         if classifier_name is not None and hyperparams is not None:
             self.name = classifier_name
@@ -45,7 +46,7 @@ class Classifier:
         self.pca = None
 
     @classmethod
-    def load(cls, model_weights_path: Path):
+    def load(cls, model_weights_path: Path) -> "Classifier":
         """
         load model weights from a path.
 
@@ -154,3 +155,17 @@ class Classifier:
             the predicted labels.
         """
         return self.clf.predict(X)
+
+    @property
+    def angles_to_compute(self) -> List[BodyAngles]:
+        """for compatibility purpose."""
+        if hasattr(self, "angles_to_compute"):
+            return self.angles_to_compute
+        else:
+            DeprecationWarning("This instance has an depreciated attribute ",
+                               "angle_to_compute. Use angles_to_compute instead.")
+            return self.angle_to_compute
+
+    @angles_to_compute.setter
+    def angles_to_compute(self, values: List[BodyAngles]):
+        self._angles_to_compute = values
