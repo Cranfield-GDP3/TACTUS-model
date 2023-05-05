@@ -12,13 +12,9 @@ as a key e.g.
 }
 """
 from typing import Union, Generator, Tuple, List, Dict
-from collections import Sequence
-import copy
+from collections.abc import Sequence
 import time
 import numpy as np
-from deep_sort_realtime.deepsort_tracker import DeepSort
-from deep_sort_realtime.deep_sort.track import Track
-from tactus_data import retracker
 from tactus_data import SkeletonRollingWindow
 
 
@@ -28,7 +24,6 @@ class FeatureTracker:
     tracking with deepsort.
     """
     def __init__(self,
-                 deepsort_tracker: DeepSort = None,
                  window_size: int = 5,
                  angles_to_compute: List[Tuple[int, int, int]] = None
                  ):
@@ -38,35 +33,24 @@ class FeatureTracker:
         self.rolling_windows: dict[int, SkeletonRollingWindow]
         self.reset_rolling_windows()
 
-        if deepsort_tracker is None:
-            self.deepsort = DeepSort(n_init=3, max_age=5)
-        else:
-            self.deepsort = deepsort_tracker
         self.tracks_to_del = []
 
     def reset_rolling_windows(self):
         self.rolling_windows = {}
 
-    def track_skeletons(self, skeletons, frame: np.ndarray):
-        """run the tracker on each skeleton and update their rolling
-        window"""
-        tracks: list[Track]
-        tracks = retracker.deepsort_track_frame(self.deepsort, frame, skeletons, new_version=True)
-        self.tracks_to_del = copy.deepcopy(self.deepsort.tracker.del_tracks_ids)
-
-        for i, track in enumerate(tracks):
-            if track.is_confirmed():
-                self.update_rolling_window(track.track_id, skeletons[i])
-
-        for track_id in self.tracks_to_del:
-            self.delete_track_id(track_id)
-
-    def update_rolling_window(self, track_id: int, skeleton: dict, has_head: bool = True, has_confidence: bool = True):
+    def update_rolling_window(self, track_id: int, skeleton: dict):
         """update a SkeletonRollingWindow from its ID"""
         if track_id not in self.rolling_windows:
             self.rolling_windows[track_id] = SkeletonRollingWindow(self.window_size, self.angles_to_compute)
 
-        self.rolling_windows[track_id].add_skeleton(skeleton, has_head, has_confidence)
+        self.rolling_windows[track_id].add_skeleton(skeleton)
+
+    def duplicate_last_entry(self, track_id: int, new_bbox_lbrt: Tuple[float, float, float, float]):
+        """
+        duplicate the last entry of a rolling window. That is useful
+        to avoid gaps in the prediction.
+        """
+        self.rolling_windows[track_id].duplicate_last_entry(new_bbox_lbrt)
 
     def delete_track_id(self, track_id: int):
         """
@@ -91,39 +75,46 @@ class FeatureTracker:
         for track_id, rolling_window in self.rolling_windows.items():
             yield track_id, rolling_window.get_features()
 
+    def __getitem__(self, __track_id: int) -> SkeletonRollingWindow:
+        return self.rolling_windows[__track_id]
+
 
 class PredTracker:
     """
     save the non-neutral predictions for each skeleton still present
     on the stream.
     """
-
     def __init__(self):
         self.tracker: Dict[int, Dict] = {}
 
-    def init_track_id(self, track_id: int):
+    def init_track(self, track_id: int):
         """initialize the dictionary key"""
         self.tracker[track_id] = {"current_label": None,
                                   "label_history": []}
 
     def add_pred(self, track_id: int, label: str, bbx: Tuple[int, int, int, int]):
         """starts the tracking of a person from a prediction label"""
+        if track_id not in self:
+            self.init_track(track_id)
+
         self.tracker[track_id]["current_label"] = label
         self.tracker[track_id]["timestamp"] = time.time()
         self.tracker[track_id]["box"] = bbx
-        if label not in self.tracker[track_id]["label_history"]:
+
+        if label != self.tracker[track_id]["label_history"][-1]:
             self.tracker[track_id]["label_history"].append(label)
 
-    def remove_pred_track(self, track_ids: Union[List[int], int]):
+    def delete_track_id(self, track_ids: Union[List[int], int]):
         """removes the track of a person"""
         if not isinstance(track_ids, Sequence):
             track_ids = [track_ids]
 
         for track_id in track_ids:
-            del self[track_id]
+            if track_id in self.tracker:
+                del self.tracker[track_id]
 
-    def __contains__(self, __index: int):
-        return __index in self.tracker
+    def __contains__(self, __track_id: int):
+        return __track_id in self.tracker
 
-    def __getitem__(self, key_name: str):
-        return self.tracker[key_name]
+    def __getitem__(self, __track_id: int):
+        return self.tracker[__track_id]
