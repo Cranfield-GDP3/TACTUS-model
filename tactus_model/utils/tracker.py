@@ -94,15 +94,16 @@ class PredTracker:
 
     def add_pred(self, track_id: int, label: str, bbx: Tuple[int, int, int, int]):
         """starts the tracking of a person from a prediction label"""
-        if track_id not in self:
+        if track_id not in self.tracker:
             self.init_track(track_id)
 
         self.tracker[track_id]["current_label"] = label
         self.tracker[track_id]["timestamp"] = time.time()
         self.tracker[track_id]["box"] = bbx
 
-        if label != self.tracker[track_id]["label_history"][-1]:
-            self.tracker[track_id]["label_history"].append(label)
+        if len(self.tracker[track_id]["label_history"]) > 0:
+            if label != self.tracker[track_id]["label_history"][-1]:
+                self.tracker[track_id]["label_history"].append(label)
 
     def delete_track_id(self, track_ids: Union[List[int], int]):
         """removes the track of a person"""
