@@ -1,8 +1,11 @@
 from typing import List, Dict, Tuple, Generator
 import json
 from pathlib import Path
+import numpy as np
 from tactus_data import data_augment, SMALL_ANGLES_LIST, MEDIUM_ANGLES_LIST
 from tactus_data.datasets.ut_interaction import data_split
+from tactus_data import Skeleton
+
 from tactus_model.utils.tracker import FeatureTracker
 from tactus_model.utils.classifier import Classifier
 
@@ -245,9 +248,8 @@ def feature_from_video(
         for skeleton in frame["skeletons"]:
             # do not deal with untracked skeletons
             if "id_stupid" in skeleton:
-                feature_tracker.update_rolling_window(
-                    skeleton["id_stupid"], skeleton,
-                    has_head=False, has_confidence=False)
+                keypoints = np.array(skeleton["keypoints"]).reshape((-1, 2))
+                feature_tracker.update_rolling_window(skeleton["id_stupid"], Skeleton(keypoints=keypoints))
 
         for skeleton_id, (success, features) in feature_tracker.extract():
             if success:
