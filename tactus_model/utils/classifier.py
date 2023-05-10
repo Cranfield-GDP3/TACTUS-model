@@ -154,7 +154,7 @@ class Classifier:
         array-like of shape (n_samples)
             the predicted labels.
         """
-        return self.clf.predict(X)
+        return self.clf.predict(X).tolist()[0]
 
     @property
     def angles_to_compute(self) -> List[BodyAngles]:
