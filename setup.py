@@ -60,7 +60,7 @@ setup(
         "issues": "https://github/Cranfield-GDP3/TACTUS-model/issues",
     },
     python_requires=">=3.8.10",
-    packages=["tactus_model"],
+    packages=find_packages(),
     install_requires=install_requires,
     tests_require=tests_require,
     extras_require=extras_require,
