@@ -159,8 +159,8 @@ class Classifier:
     @property
     def angles_to_compute(self) -> List[BodyAngles]:
         """for compatibility purpose."""
-        if hasattr(self, "angles_to_compute"):
-            return self.angles_to_compute
+        if hasattr(self, "_angles_to_compute"):
+            return self._angles_to_compute
         else:
             DeprecationWarning("This instance has an depreciated attribute ",
                                "angle_to_compute. Use angles_to_compute instead.")
