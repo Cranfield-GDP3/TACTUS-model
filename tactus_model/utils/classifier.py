@@ -17,6 +17,8 @@ AVAILABLE_MODELS = {
 
 
 class Classifier:
+    ACTION_LABELS = ['kicking', 'punching', 'pushing', 'neutral']
+
     def __init__(self, classifier_name: str = None, hyperparams: dict = None) -> None:
         """
         Create the classifier instance with the given name and
@@ -140,7 +142,23 @@ class Classifier:
         """
         return self.clf.fit(X, Y)
 
-    def predict(self, X):
+    def predict(self, X) -> List[int]:
+        """
+        predict the action index on a feature set.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            features.
+
+        Returns
+        -------
+        array-like of shape (n_samples)
+            the predicted indexes.
+        """
+        return self.clf.predict(X).tolist()
+
+    def predict_label(self, X) -> List[str]:
         """
         predict the label on a feature set.
 
@@ -154,7 +172,16 @@ class Classifier:
         array-like of shape (n_samples)
             the predicted labels.
         """
-        return self.clf.predict(X).tolist()[0]
+        pred = self.predict(X)
+
+        labels = [""] * len(pred)
+        if hasattr(self, "ACTION_LABELS"):
+            labels = [self.ACTION_LABELS[index] for index in pred]
+        else:
+            # for retro compatibility purposes
+            labels = [int_to_label(index) for index in pred]
+
+        return labels
 
     @property
     def angles_to_compute(self) -> List[BodyAngles]:
@@ -169,3 +196,13 @@ class Classifier:
     @angles_to_compute.setter
     def angles_to_compute(self, values: List[BodyAngles]):
         self._angles_to_compute = values
+
+
+def label_to_int(label: str) -> int:
+    """transform a label to its corresponding integer."""
+    return Classifier.ACTION_LABELS.index(label)
+
+
+def int_to_label(index: int) -> str:
+    """transform an int to its corresponding label."""
+    return Classifier.ACTION_LABELS[index]
