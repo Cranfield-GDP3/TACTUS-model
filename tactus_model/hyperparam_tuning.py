@@ -7,18 +7,15 @@ from tactus_data.datasets.ut_interaction import data_split
 from tactus_data import Skeleton
 
 from tactus_model.utils.tracker import FeatureTracker
-from tactus_model.utils.classifier import Classifier
-
-AVAILABLE_CLASSES = ['kicking', 'punching', 'pushing', 'neutral']
+from tactus_model.utils.classifier import Classifier, label_to_int
 
 DATA_AUGMENT_GRIDS = {
     "FLIP": {"horizontal_flip": [True, False]},
-
 }
 
-TRACKER_GRID = {  # grid size: 6
-    "window_size": [9], #[3, 5, 9],  # impact velocity
-    "number_of_angles": [0] # 8],
+TRACKER_GRID = {  # grid size: 1
+    "window_size": [9],  # impact velocity
+    "number_of_angles": [0],
 }
 
 CLASSIFIER_HYPERPARAMS = {  # grid size : 18
@@ -26,7 +23,7 @@ CLASSIFIER_HYPERPARAMS = {  # grid size : 18
         "batch_size": [256],
         "num_epochs": [300],
         "hidden_layer_sizes": [{"layer_sizes": [256, 128, 16], "dropout": [0.4, 0.2, 0.1]},
-                                {"layer_sizes": [1024, 512, 128, 16], "dropout": [0.5, 0.3, 0.2, 0.1]}],
+                               {"layer_sizes": [1024, 512, 128, 16], "dropout": [0.5, 0.3, 0.2, 0.1]}],
         "activation": ['Tanh', 'ReLU']
     },
 }
@@ -300,11 +297,6 @@ def compute_label(frame_id: str, classes: List[Dict], i_label: int) -> str:
         return classes[i_label]["classification"]
 
     return "neutral"
-
-
-def label_to_int(label: str) -> int:
-    """transform a label to its corresponding integer."""
-    return AVAILABLE_CLASSES.index(label)
 
 
 def get_angle_list(number_of_angles: int) -> List[Tuple[int, int, int]]:
