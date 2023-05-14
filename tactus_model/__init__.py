@@ -1,4 +1,4 @@
-__version__ = "0.0.0"
+__version__ = "1.0.0"
 
 from .utils.tracker import FeatureTracker, PredTracker
 from .utils.classifier import Classifier
