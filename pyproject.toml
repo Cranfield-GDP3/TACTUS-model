@@ -1,0 +1,25 @@
+[project]
+name = "TACTUS-model"
+# PEP 440 - Version Identification and Dependency Specification https://peps.python.org/pep-0440/
+version = "1.0.0"
+description = "Threatening activities classification toward users' security"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+]
+
+dependencies = [
+    "numpy",
+    "scikit-learn",
+    "tactus-data",
+    "pytest",
+]
+
+[project.urls]
+repository = "https://github.com/Cranfield-GDP3/TACTUS-model"
+
+[tool.setuptools.packages]
+find = {}
