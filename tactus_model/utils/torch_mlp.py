@@ -76,6 +76,8 @@ class TorchMLP:
                 loss.backward()
                 self. optimizer.step()
 
+        torch.cuda.empty_cache()
+
     def predict(self, X):
         """
         predict using the fitted model
