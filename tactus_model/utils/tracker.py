@@ -15,7 +15,7 @@ from typing import Union, Generator, Tuple, List, Dict
 from collections.abc import Sequence
 import time
 import numpy as np
-from tactus_data import SkeletonRollingWindow
+from tactus_data import SkeletonRollingWindow, Skeleton
 
 
 class FeatureTracker:
@@ -45,12 +45,12 @@ class FeatureTracker:
 
         self.rolling_windows[track_id].add_skeleton(skeleton)
 
-    def duplicate_last_entry(self, track_id: int, new_bbox_lbrt: Tuple[float, float, float, float]):
+    def duplicate_last_entry(self, track_id: int, new_bbox_lbrt: Tuple[float, float, float, float]) -> Skeleton:
         """
         duplicate the last entry of a rolling window. That is useful
         to avoid gaps in the prediction.
         """
-        self.rolling_windows[track_id].duplicate_last_entry(new_bbox_lbrt)
+        return self.rolling_windows[track_id].duplicate_last_entry(new_bbox_lbrt)
 
     def delete_track_id(self, track_id: int):
         """
