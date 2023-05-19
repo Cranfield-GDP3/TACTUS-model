@@ -13,18 +13,20 @@ DATA_AUGMENT_GRIDS = {
     "FLIP": {"horizontal_flip": [True, False]},
 }
 
-TRACKER_GRID = {  # grid size: 1
-    "window_size": [9],  # impact velocity
+TRACKER_GRID = {
+    "window_size": [9],
     "number_of_angles": [0],
 }
 
-CLASSIFIER_HYPERPARAMS = {  # grid size : 18
+CLASSIFIER_HYPERPARAMS = {
     "TorchMLP": {
         "batch_size": [256],
-        "num_epochs": [300],
+        "num_epochs": [30],
         "hidden_layer_sizes": [{"layer_sizes": [256, 128, 16], "dropout": [0.4, 0.2, 0.1]},
-                               {"layer_sizes": [1024, 512, 128, 16], "dropout": [0.5, 0.3, 0.2, 0.1]}],
-        "activation": ['Tanh', 'ReLU']
+                               {"layer_sizes": [1024, 512, 128, 16], "dropout": [0.5, 0.3, 0.2, 0.1]},
+                               {"layer_sizes": [512, 128, 64], "dropout": [0.2, 0.2, 0.1]},
+                               ],
+        "activation": ['ReLU']
     },
 }
 
@@ -152,10 +154,10 @@ def save_model_evaluation(model_id, classifier, augment_grid, tracker_params, X,
     eval_dict["classifier_name"] = classifier.name
     eval_dict["hyperparams"] = classifier.hyperparams
 
-    eval_dict["y_pred_train"] = classifier.predict(X).tolist()
+    eval_dict["y_pred_train"] = classifier.predict(X)
     eval_dict["y_true_train"] = Y
 
-    eval_dict["y_pred_test"] = classifier.predict(X_test).tolist()
+    eval_dict["y_pred_test"] = classifier.predict(X_test)
     eval_dict["y_true_test"] = Y_test
 
     filename = Path(f"data/models/evaluation/{model_id}.json")
@@ -245,18 +247,21 @@ def feature_from_video(
         for skeleton in frame["skeletons"]:
             # do not deal with untracked skeletons
             if "id_stupid" in skeleton:
+                skeleton_id = skeleton["id_stupid"]
+
                 keypoints = np.array(skeleton["keypoints"]).reshape((-1, 2))
-                feature_tracker.update_rolling_window(skeleton["id_stupid"], Skeleton(keypoints=keypoints))
+                feature_tracker.update_rolling_window(skeleton_id, Skeleton(keypoints=keypoints))
 
-        for skeleton_id, (success, features) in feature_tracker.extract():
-            if success:
-                if skeleton_id == offender_id:
-                    label = compute_label(frame["frame_id"], labels["classes"], i_label)
-                else:
-                    label = "neutral"
+                if feature_tracker[skeleton_id].is_complete():
+                    features = feature_tracker[skeleton_id].get_features()
 
-                video_features.append(features)
-                video_labels.append(label_to_int(label))
+                    if skeleton_id == offender_id:
+                        label = compute_label(frame["frame_id"], labels["classes"], i_label)
+                    else:
+                        label = "neutral"
+
+                    video_features.append(features)
+                    video_labels.append(label_to_int(label))
 
         # jump to the next action
         if i_label >= labels["classes"][i_label]["end_frame"]:
