@@ -128,16 +128,20 @@ def train_grid_search(
     """
     # cant use a generator here because we use this multiple times
     train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
-
+    
     model_id = 0
     for augment_grid in get_augment_grid(augment_grids):
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
         delete_data_augment(train_videos + test_videos, fps)
 
-        for video_path in train_videos + test_videos:
+        for video_path in train_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
+
+        for video_path in test_videos:
+            original_data_path = video_path / f"{fps}fps" / "yolov7.json"
+            data_augment.grid_augment(original_data_path, {})
 
         # compute features
         for tracker_params in get_tracker_params(tracker_grid):
@@ -147,9 +151,7 @@ def train_grid_search(
 
             X, Y = generate_features(train_videos, fps, window_size, angle_list)
             X_test, Y_test = generate_features(test_videos, fps, window_size, angle_list)
-            print(len(X), len(Y))
             X,Y = sample_data(X, Y, sampler)
-            print(len(X),len(Y))
 
             for classifier in get_classifier(classifier_grids):
                 print("fit classifier: ", classifier.name, " with ", classifier.hyperparams)
