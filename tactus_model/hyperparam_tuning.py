@@ -92,7 +92,8 @@ def get_tracker_params(
     for grid in data_augment.ParameterGrid(tracker_grid):
         yield grid
 
-def sample_data(X, Y, sampler):
+
+def sample_data(X: List, Y: List, sampler: str):
     """
     Over/Under sample the data if the flag is set to the corresponding value, does nothing if flag = X
     Args:
@@ -108,8 +109,9 @@ def sample_data(X, Y, sampler):
     elif sampler == "SMOTE":
         sampler = SMOTE()
     else:
-        return X,Y
-    return sampler.fit_resample(X,Y)
+        return X, Y
+    return sampler.fit_resample(X, Y)
+
 
 def train_grid_search(
         fps: int = 10,
@@ -128,7 +130,7 @@ def train_grid_search(
     """
     # cant use a generator here because we use this multiple times
     train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
-    
+
     model_id = 0
     for augment_grid in get_augment_grid(augment_grids):
         # augments data and saves it in files
