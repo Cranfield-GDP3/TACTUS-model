@@ -12,8 +12,8 @@ as a key e.g.
 }
 """
 from typing import Union, Generator, Tuple, List, Dict
+from collections import deque, Counter
 from collections.abc import Sequence
-import time
 import numpy as np
 from tactus_data import SkeletonRollingWindow, Skeleton
 
@@ -84,26 +84,27 @@ class PredTracker:
     save the non-neutral predictions for each skeleton still present
     on the stream.
     """
-    def __init__(self):
+    def __init__(self, prediction_smoothing: int = 5):
         self.tracker: Dict[int, Dict] = {}
+        self.pred_rw_size = prediction_smoothing
 
     def init_track(self, track_id: int):
         """initialize the dictionary key"""
         self.tracker[track_id] = {"current_label": None,
-                                  "label_history": []}
+                                  "violent": False,
+                                  "pred_history": deque(maxlen=self.pred_rw_size)}
 
-    def add_pred(self, track_id: int, label: str, bbx: Tuple[int, int, int, int]):
+    def add_pred(self, track_id: int, label: str):
         """starts the tracking of a person from a prediction label"""
         if track_id not in self.tracker:
             self.init_track(track_id)
 
-        self.tracker[track_id]["current_label"] = label
-        self.tracker[track_id]["timestamp"] = time.time()
-        self.tracker[track_id]["box"] = bbx
+        self.tracker[track_id]["pred_history"].append(label)
+        smoothed_label = self.get_smoothed_pred(track_id)
+        self.tracker[track_id]["current_label"] = smoothed_label
 
-        if len(self.tracker[track_id]["label_history"]) > 0:
-            if label != self.tracker[track_id]["label_history"][-1]:
-                self.tracker[track_id]["label_history"].append(label)
+        if smoothed_label != "neutral":
+            self.tracker[track_id]["violent"] = True
 
     def delete_track_id(self, track_ids: Union[List[int], int]):
         """removes the track of a person"""
@@ -114,8 +115,22 @@ class PredTracker:
             if track_id in self.tracker:
                 del self.tracker[track_id]
 
+    def get_smoothed_pred(self, track_id: int) -> str:
+        """get the smoothed prediction"""
+        return most_common(self.tracker[track_id]["pred_history"])
+
+    def get_last_pred(self, track_id: int) -> str:
+        """return the last prediction made"""
+        return self.tracker[track_id]["current_label"]
+
     def __contains__(self, __track_id: int):
         return __track_id in self.tracker
 
     def __getitem__(self, __track_id: int):
         return self.tracker[__track_id]
+
+
+def most_common(lst):
+    """return the most common element of a list"""
+    counter = Counter(lst)
+    return counter.most_common(1)[0][0]
