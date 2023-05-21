@@ -2,6 +2,8 @@ from typing import List, Dict, Tuple, Generator
 import json
 from pathlib import Path
 import numpy as np
+from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 from tactus_data import data_augment, SMALL_ANGLES_LIST, MEDIUM_ANGLES_LIST
 from tactus_data.datasets.ut_interaction import data_split
 from tactus_data import Skeleton
@@ -90,12 +92,31 @@ def get_tracker_params(
     for grid in data_augment.ParameterGrid(tracker_grid):
         yield grid
 
+def sample_data(X, Y, sampler):
+    """
+    Over/Under sample the data if the flag is set to the corresponding value, does nothing if flag = X
+    Args:
+        X: Data for the classifier
+        Y: Label for the classifier
+        sampler: Flag chosing the sample technique
+
+    Returns:
+        The sampled data
+    """
+    if sampler == "RUS":
+        sampler = RandomUnderSampler()
+    elif sampler == "SMOTE":
+        sampler = SMOTE()
+    else:
+        return X,Y
+    return sampler.fit_resample(X,Y)
 
 def train_grid_search(
         fps: int = 10,
         augment_grids: Dict[str, Dict] = None,
         tracker_grid: Dict[str, List] = None,
         classifier_grids: Dict[str, Dict] = None,
+        sampler: str = "RUS"
 ):
     """
     launch the training process
@@ -107,16 +128,20 @@ def train_grid_search(
     """
     # cant use a generator here because we use this multiple times
     train_videos, _, test_videos = data_split(Path("data/processed/ut_interaction/"), (85, 0, 15))
-
+    
     model_id = 0
     for augment_grid in get_augment_grid(augment_grids):
         # augments data and saves it in files
         print("augments data with: ", augment_grid)
         delete_data_augment(train_videos + test_videos, fps)
 
-        for video_path in train_videos + test_videos:
+        for video_path in train_videos:
             original_data_path = video_path / f"{fps}fps" / "yolov7.json"
             data_augment.grid_augment(original_data_path, augment_grid)
+
+        for video_path in test_videos:
+            original_data_path = video_path / f"{fps}fps" / "yolov7.json"
+            data_augment.grid_augment(original_data_path, {})
 
         # compute features
         for tracker_params in get_tracker_params(tracker_grid):
@@ -126,6 +151,7 @@ def train_grid_search(
 
             X, Y = generate_features(train_videos, fps, window_size, angle_list)
             X_test, Y_test = generate_features(test_videos, fps, window_size, angle_list)
+            X,Y = sample_data(X, Y, sampler)
 
             for classifier in get_classifier(classifier_grids):
                 print("fit classifier: ", classifier.name, " with ", classifier.hyperparams)
